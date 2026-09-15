@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22: `@vitest/coverage-v8` dan sebagian toolchain menuntutnya.
+          # Lokal masih Node 20, karena itu coverage memakai provider istanbul.
+          node-version: 22
+          cache: npm
+
+      - name: Pasang dependency
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        # `next typegen` menulis tipe route yang dipakai `PageProps`/`RouteContext`.
+        # Tanpa ini `tsc` gagal pada berkas yang belum pernah di-build.
+        run: |
+          npx next typegen
+          npm run typecheck
+
+      - name: Unit test + ambang cakupan
+        run: npm run test:coverage
+
+      - name: Build
+        env:
+          # Hanya dibutuhkan supaya build tidak gagal saat modul membacanya;
+          # nilai sebenarnya diberikan per environment saat runtime (9.2).
+          API_BASE_URL: http://localhost:8000
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pasang dependency
+        run: npm ci
+
+      - name: Pasang browser Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E
+        # Playwright menyalakan sendiri backend tiruan dan `next start`
+        # (lihat `playwright.config.ts`), jadi langkah ini tidak menuntut
+        # Postgres maupun user ter-seed.
+        run: npm run test:e2e
+
+      - name: Simpan laporan saat gagal
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
