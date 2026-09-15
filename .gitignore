@@ -43,3 +43,11 @@ openapi.json
 
 # env
 .env.local
+
+# Contoh env boleh ikut commit (tidak memuat rahasia).
+!.env.example
+
+# keluaran Playwright
+/test-results
+/playwright-report
+/blob-report

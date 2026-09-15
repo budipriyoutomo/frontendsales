@@ -804,6 +804,11 @@ export interface components {
             transaction_status_id: number;
             /** Void Staff Id */
             void_staff_id: number;
+            /**
+             * Deleted
+             * @default 0
+             */
+            deleted: number;
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -876,6 +881,11 @@ export interface components {
             transaction_status_id: number;
             /** Void Staff Id */
             void_staff_id: number;
+            /**
+             * Deleted
+             * @default 0
+             */
+            deleted: number;
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -1320,6 +1330,11 @@ export interface components {
             outlet_code?: string | null;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Must Change Password
+             * @default false
+             */
+            must_change_password: boolean;
         };
         /** ValidationError */
         ValidationError: {
