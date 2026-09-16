@@ -13,6 +13,7 @@ test.describe("Admin (8.3)", () => {
       "Transaksi",
       "Status Sync",
       "API Key",
+      "Product Group",
       "Pengguna",
     ]) {
       await expect(nav.getByRole("link", { name: menu })).toBeVisible();
@@ -57,6 +58,18 @@ test.describe("Manager (8.3)", () => {
     await expect(nav.getByRole("link", { name: "Transaksi" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "API Key" })).toBeHidden();
     await expect(nav.getByRole("link", { name: "Pengguna" })).toBeHidden();
+    await expect(nav.getByRole("link", { name: "Product Group" })).toBeHidden();
+  });
+
+  test("membuka /product-group langsung mendapat 403, isinya tidak terkirim (10.16)", async ({
+    page,
+  }) => {
+    await masuk(page, "manager");
+    await page.goto("/product-group");
+
+    await expect(page.getByText(/halaman ini tidak untuk anda/i)).toBeVisible();
+    await expect(page.getByLabel(/nama group/i)).toHaveCount(0);
+    await expect(page.getByText("COLORPLATE")).toHaveCount(0);
   });
 
   test("membuka /pengguna langsung mendapat 403 yang jelas, bukan crash (3.9)", async ({

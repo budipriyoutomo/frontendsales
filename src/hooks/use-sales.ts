@@ -7,6 +7,7 @@ import type {
   DailyRow,
   Outlet,
   OutletSalesRow,
+  ProductGroupSalesRow,
   Summary,
   SyncStatusRow,
   TopProductRow,
@@ -58,12 +59,41 @@ export function useSalesByOutlet(filter: Filter, aktif: boolean) {
   });
 }
 
-export function useTopProducts(filter: Filter, limit = 10) {
+export function useTopProducts(filter: Filter, limit = 10, group?: string) {
   return useQuery({
-    queryKey: [...kunci("top-products", filter), limit],
+    queryKey: [...kunci("top-products", filter), limit, group ?? ""],
     queryFn: () =>
       api.request<TopProductRow[]>("/api/sales/top-products", {
-        query: { ...filterKeQuery(filter), limit },
+        // Endpoint ini hanya menerima SATU group, beda dengan by-group (10.11).
+        query: { ...filterKeQuery(filter), limit, product_group: group },
+      }),
+  });
+}
+
+/**
+ * Group yang ADA di data penjualan (10.9) — bukan daftar yang dipublish
+ * (`/api/product-groups`). Untuk role outlet, server mengabaikan `outlet`.
+ */
+export function useSalesProductGroups(outlet?: string) {
+  return useQuery({
+    queryKey: ["sales-product-groups", outlet ?? ""],
+    staleTime: 5 * 60_000,
+    queryFn: () =>
+      api.request<string[]>("/api/sales/product-groups", {
+        query: { outlet },
+      }),
+  });
+}
+
+export function useSalesByGroup(filter: Filter, groups: readonly string[]) {
+  return useQuery({
+    queryKey: [...kunci("by-group", filter), groups],
+    // `product_group` wajib di backend — tanpa group, request pasti 422.
+    enabled: groups.length > 0,
+    queryFn: () =>
+      api.request<ProductGroupSalesRow[]>("/api/sales/by-group", {
+        // Array → param berulang; beberapa group TIDAK dipisah koma (10.10).
+        query: { ...filterKeQuery(filter), product_group: groups },
       }),
   });
 }

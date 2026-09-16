@@ -12,7 +12,7 @@ export type NavItem = {
   href: string;
   label: string;
   /** Ikon lucide, dipilih di komponen sidebar. */
-  icon: "dashboard" | "transaksi" | "sync" | "kunci" | "pengguna";
+  icon: "dashboard" | "transaksi" | "sync" | "kunci" | "group" | "pengguna";
   roles: readonly Role[];
 };
 
@@ -41,6 +41,14 @@ export const NAV: readonly NavItem[] = [
     href: "/api-keys",
     label: "API Key",
     icon: "kunci",
+    roles: ["admin"],
+  },
+  {
+    // Menentukan event apa yang diterima consumer RabbitMQ — sama sensitifnya
+    // dengan API key, jadi manager pun tidak (TODO 10.4).
+    href: "/product-group",
+    label: "Product Group",
+    icon: "group",
     roles: ["admin"],
   },
   {

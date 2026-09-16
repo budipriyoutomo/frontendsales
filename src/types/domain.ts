@@ -21,3 +21,5 @@ export type Outlet = S["OutletResponse"];
 export type ApiKey = S["ApiKeyResponse"];
 export type UserAdmin = S["UserAdminResponse"];
 export type Pagination = S["PaginationMeta"];
+export type ProductGroupMapping = S["ProductGroupMappingResponse"];
+export type ProductGroupSalesRow = S["ProductGroupSalesRow"];

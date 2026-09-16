@@ -76,11 +76,26 @@ export function bacaFilter(
   return { start_date, end_date, outlet: outlet ? outlet : undefined };
 }
 
-export function filterKeSearchParams(filter: Filter): URLSearchParams {
-  const params = new URLSearchParams();
+/**
+ * `dasar` adalah URL yang sedang berlaku. Param di luar filter (mis. group
+ * terpilih, 10.12) dibawa serta — tanpanya, mengganti tanggal diam-diam
+ * mengosongkan pilihan lain di halaman.
+ *
+ * `offset` justru **dibuang**: halaman transaksi menyimpan nomor halaman di
+ * URL, dan filter baru dengan offset lama membuka hasilnya di baris ke-101 —
+ * tabel tampak kosong padahal datanya ada. Pemanggil yang memang sedang
+ * berpindah halaman memasang `offset` sendiri setelah ini.
+ */
+export function filterKeSearchParams(
+  filter: Filter,
+  dasar?: URLSearchParams,
+): URLSearchParams {
+  const params = new URLSearchParams(dasar);
   params.set("start_date", filter.start_date);
   params.set("end_date", filter.end_date);
   if (filter.outlet) params.set("outlet", filter.outlet);
+  else params.delete("outlet");
+  params.delete("offset");
   return params;
 }
 

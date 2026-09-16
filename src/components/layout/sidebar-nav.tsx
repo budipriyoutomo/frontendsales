@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   KeyRound,
+  Layers,
   LayoutDashboard,
   ReceiptText,
   RefreshCw,
@@ -17,6 +18,7 @@ const IKON = {
   transaksi: ReceiptText,
   sync: RefreshCw,
   kunci: KeyRound,
+  group: Layers,
   pengguna: Users,
 } as const;
 

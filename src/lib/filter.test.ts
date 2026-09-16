@@ -96,6 +96,32 @@ describe("filterKeSearchParams (4.8)", () => {
 
     expect(params.has("outlet")).toBe(false);
   });
+
+  it("mempertahankan param lain di URL, mis. group terpilih (10.12)", () => {
+    const params = filterKeSearchParams(
+      { start_date: "2026-02-01", end_date: "2026-02-28" },
+      new URLSearchParams(
+        "start_date=2026-01-01&outlet=OUT1&product_group=A&product_group=B",
+      ),
+    );
+
+    expect(params.get("start_date")).toBe("2026-02-01");
+    expect(params.getAll("product_group")).toEqual(["A", "B"]);
+    // Outlet milik filter, jadi "semua outlet" memang menghapusnya.
+    expect(params.has("outlet")).toBe(false);
+  });
+
+  it("membuang offset — ganti filter berarti kembali ke halaman pertama", () => {
+    // Halaman transaksi menyimpan nomor halaman di URL. Kalau offset ikut
+    // terbawa, rentang tanggal baru dibuka di baris ke-101 dan tabelnya
+    // tampak kosong padahal datanya ada.
+    const params = filterKeSearchParams(
+      { start_date: "2026-02-01", end_date: "2026-02-28" },
+      new URLSearchParams("start_date=2026-01-01&offset=100"),
+    );
+
+    expect(params.has("offset")).toBe(false);
+  });
 });
 
 describe("filterKeQuery", () => {

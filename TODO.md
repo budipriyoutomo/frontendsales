@@ -3,8 +3,9 @@
 Repo: `D:\Project\maharasa\sync-frontend` — **terpisah** dari `sync-api`.
 Stack terpasang: Next.js 16.3.5 · React 19.2.8 · Tailwind v4 · TypeScript 5 ·
 Vitest 4 · Testing Library · MSW 2 · TanStack Query 5. Dokumen ini ditulis dari kontrak API yang
-sudah diverifikasi langsung ke server yang berjalan — 26 endpoint, semuanya
-dites 200 dengan token dan 401 tanpa token.
+sudah diverifikasi langsung ke server yang berjalan — awalnya 26 endpoint,
+semuanya dites 200 dengan token dan 401 tanpa token. Setelah Fase 10,
+`openapi.json` memuat 30 path (lihat 10.2–10.3).
 
 Aturan yang berlaku sama seperti backend: **TDD wajib** — test merah dulu,
 baru implementasi.
@@ -20,36 +21,36 @@ menulis ulang nanti.
 
 - [x] **0.2 Cara menyimpan token — DIPUTUSKAN: opsi A (BFF, httpOnly cookie).**
 
-      Dashboard ini bisa membaca dan **membuat ulang API key semua outlet**
-          (`POST /api/api-keys/{outlet}/rotate` mengembalikan key mentah). Artinya
-          token admin yang dicuri = seluruh kunci POS dicuri.
+  Dashboard ini bisa membaca dan **membuat ulang API key semua outlet**
+  (`POST /api/api-keys/{outlet}/rotate` mengembalikan key mentah). Artinya
+  token admin yang dicuri = seluruh kunci POS dicuri.
 
-          | Opsi | Konsekuensi |
-          |---|---|
-          | **A. BFF — token di httpOnly cookie (disarankan)** | Route Handler Next jadi proxy ke FastAPI. Token tidak pernah tersentuh JavaScript, jadi XSS tidak bisa mencurinya. Server Component bisa fetch data. CORS jadi tidak relevan (satu origin). Biaya: satu lapis proxy tipis. |
-          | B. Token di `localStorage` | Paling sedikit kode, tapi XSS apa pun = token admin bocor. Semua fetch harus client-side. |
-          | C. Access token di memori + refresh di cookie | Aman di tengah, tapi hilang tiap refresh halaman sampai refresh token dipakai — kedip di setiap reload. |
+  | Opsi                                               | Konsekuensi                                                                                                                                                                                                                |
+  | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | **A. BFF — token di httpOnly cookie (disarankan)** | Route Handler Next jadi proxy ke FastAPI. Token tidak pernah tersentuh JavaScript, jadi XSS tidak bisa mencurinya. Server Component bisa fetch data. CORS jadi tidak relevan (satu origin). Biaya: satu lapis proxy tipis. |
+  | B. Token di `localStorage`                         | Paling sedikit kode, tapi XSS apa pun = token admin bocor. Semua fetch harus client-side.                                                                                                                                  |
+  | C. Access token di memori + refresh di cookie      | Aman di tengah, tapi hilang tiap refresh halaman sampai refresh token dipakai — kedip di setiap reload.                                                                                                                    |
 
-          Backend tetap Bearer seperti sekarang; cookie hanya antara browser dan Next.
-          Konsekuensi untuk Fase 2: login diposting ke Route Handler Next, bukan
-          langsung ke FastAPI.
+  Backend tetap Bearer seperti sekarang; cookie hanya antara browser dan Next.
+  Konsekuensi untuk Fase 2: login diposting ke Route Handler Next, bukan
+  langsung ke FastAPI.
 
 - [x] **0.3 UI kit — DIPUTUSKAN: Tailwind + shadcn/ui.** Komponen ditempel ke
       repo (`src/components/ui/`), bukan dependency — bebas diubah. Preset
       `radix-nova`, base color neutral, ikon lucide. Chart: Recharts lewat
       `components/ui/chart.tsx`.
 
-      Komponen `form` shadcn sengaja **tidak** dipasang: dia menyeret
-          `react-hook-form` + `zod`, sedangkan form di aplikasi ini kecil-kecil
-          dan sudah cukup dengan state terkendali biasa.
+  Komponen `form` shadcn sengaja **tidak** dipasang: dia menyeret
+  `react-hook-form` + `zod`, sedangkan form di aplikasi ini kecil-kecil
+  dan sudah cukup dengan state terkendali biasa.
 
 - [x] **0.4 Bahasa antarmuka — DIPUTUSKAN: Indonesia, `id-ID`.**
       `<html lang="id">`, angka `Rp 4.418.375`, tanggal `12 Sep 2026`.
       Semuanya lewat `src/lib/format.ts` — satu tempat, bukan sepuluh
       `toLocaleString` yang perlahan berbeda.
 
-      Nilai yang tidak ada dirender `—`, **bukan** `Rp 0`: "Rp 0" terbaca
-          seolah omzetnya memang nol padahal datanya tidak ada (lihat 4.11).
+  Nilai yang tidak ada dirender `—`, **bukan** `Rp 0`: "Rp 0" terbaca
+  seolah omzetnya memang nol padahal datanya tidak ada (lihat 4.11).
 
 ---
 
@@ -60,24 +61,24 @@ menulis ulang nanti.
       `ReceiptTotalAmount`, dan kolom itu **jumlah item, bukan uang** —
       terbukti `ReceiptTotalAmount == sum(orderdetail.Amount)` di 14/14 baris.
 
-      Diputuskan: omzet = **`ReceiptPayPrice`** (yang benar-benar dibayar).
-          Diperbaiki dengan TDD — 14 test merah dulu, lalu hijau. Dikunci oleh
-          `TestOmzetPakaiKolomUang`, yang mengunci **pilihan kolomnya**, bukan
-          sekadar angkanya.
+  Diputuskan: omzet = **`ReceiptPayPrice`** (yang benar-benar dibayar).
+  Diperbaiki dengan TDD — 14 test merah dulu, lalu hijau. Dikunci oleh
+  `TestOmzetPakaiKolomUang`, yang mengunci **pilihan kolomnya**, bukan
+  sekadar angkanya.
 
-          Terverifikasi ke database: summary sekarang **Rp 4.418.375**
-          (sebelumnya Rp 109), rata-rata Rp 315.598 per struk.
-          Fase 4 tidak lagi terblokir.
+  Terverifikasi ke database: summary sekarang **Rp 4.418.375**
+  (sebelumnya Rp 109), rata-rata Rp 315.598 per struk.
+  Fase 4 tidak lagi terblokir.
 
 - [x] **0.6 Bentuk response tidak seragam.** `/api/auth/*` mengembalikan objek
       polos (`{access_token, refresh_token, user, ...}`), semua endpoint lain
       dibungkus `{success, data}`.
 
-      **DIPUTUSKAN: backend tidak diubah, client yang menangani dua bentuk.**
-          Alasan: endpoint auth sudah berjalan dan mengubahnya menyentuh kontrak
-          yang dipakai di luar dashboard. Amplop dikenali hanya kalau `success`
-          **dan** `data` dua-duanya ada — jadi objek polos seperti `{data: 42}`
-          lolos apa adanya. Dikunci oleh test di `src/lib/api/client.test.ts`.
+  **DIPUTUSKAN: backend tidak diubah, client yang menangani dua bentuk.**
+  Alasan: endpoint auth sudah berjalan dan mengubahnya menyentuh kontrak
+  yang dipakai di luar dashboard. Amplop dikenali hanya kalau `success`
+  **dan** `data` dua-duanya ada — jadi objek polos seperti `{data: 42}`
+  lolos apa adanya. Dikunci oleh test di `src/lib/api/client.test.ts`.
 
 ---
 
@@ -93,15 +94,18 @@ menulis ulang nanti.
       Jangan mengetik ulang tipe response — backend sudah ter-skema penuh,
       dan tipe yang diketik tangan akan berbeda diam-diam saat backend berubah.
       Hasil: `src/types/api.ts` (2.188 baris, 26 path). Regenerasi dengan
-      `npm run gen:api` saat backend berubah; `openapi.json` disalin ke repo ini
-      supaya generate tidak menuntut backend hidup.
+      `npm run gen:api` saat backend berubah. `openapi.json` disimpan sebagai
+      salinan **lokal** (masuk `.gitignore`, lihat 10.2) supaya generate tidak
+      menuntut backend hidup.
 - [x] 1.6 Client HTTP terpusat: base URL, header auth, penanganan error seragam.
-- [x] 1.7 TanStack Query untuk cache + state server. _(paket terpasang, belum diwire)_
+- [x] 1.7 TanStack Query untuk cache + state server. Provider di
+      `src/app/providers.tsx`, dipakai lewat `src/hooks/` (mis. `use-sales.ts`).
 
 ### Test Fase 1
 
 - [x] 1.8 Vitest + Testing Library + jsdom jalan (`npm test`, config di `vitest.config.mts`).
-- [x] 1.9 MSW (Mock Service Worker) untuk memalsukan API di test. _(paket terpasang, belum dikonfigurasi)_
+- [x] 1.9 MSW (Mock Service Worker) untuk memalsukan API di test. Server di
+      `src/test/msw/server.ts`.
 - [x] 1.10 Test: client HTTP menempelkan header `Authorization`.
 - [x] 1.11 Test: client membongkar `{success, data}` **dan** objek polos (lihat 0.6).
 
@@ -135,24 +139,24 @@ Fakta dari backend:
 - [x] 2.8 Paksa ganti password saat pertama masuk — admin pertama dibuat
       dengan password sementara.
 
-      Backend (`sync-api`) menambahkan kolom `must_change_password`, migrasi
-          `005_must_change_password.sql`. Siklus hidupnya:
-          `create_user` → TRUE, `set_password` (reset admin) → TRUE,
-          `ganti_password_sendiri` → FALSE. Dikunci 7 test.
+  Backend (`sync-api`) menambahkan kolom `must_change_password`, migrasi
+  `005_must_change_password.sql`. Siklus hidupnya:
+  `create_user` → TRUE, `set_password` (reset admin) → TRUE,
+  `ganti_password_sendiri` → FALSE. Dikunci 7 test.
 
-          DEFAULT FALSE, bukan TRUE — disengaja: baris yang sudah ada dibuat
-          sebelum kolom ini lahir, dan memberi TRUE pada mereka akan memaksa
-          setiap user yang sedang berjalan ganti password di login berikutnya.
+  DEFAULT FALSE, bukan TRUE — disengaja: baris yang sudah ada dibuat
+  sebelum kolom ini lahir, dan memberi TRUE pada mereka akan memaksa
+  setiap user yang sedang berjalan ganti password di login berikutnya.
 
-          Frontend: layout `(app)` melempar ke `/ganti-password` sebelum halaman
-          apa pun terbuka.
+  Frontend: layout `(app)` melempar ke `/ganti-password` sebelum halaman
+  apa pun terbuka.
 
-          **Catatan struktur — jangan dibatalkan.** `/ganti-password` berada di
-          route group `(ganti-password)`, DI LUAR `(app)`. Pengecualian berbasis
-          pathname sempat dicoba dan gagal: pathname hanya tersedia lewat header
-          titipan `proxy.ts`, dan header itu **tidak sampai pada request RSC**,
-          jadi penjaga memantulkan halaman ganti-password ke dirinya sendiri tanpa
-          henti. Dijaga oleh test yang memeriksa letak berkasnya.
+  **Catatan struktur — jangan dibatalkan.** `/ganti-password` berada di
+  route group `(ganti-password)`, DI LUAR `(app)`. Pengecualian berbasis
+  pathname sempat dicoba dan gagal: pathname hanya tersedia lewat header
+  titipan `proxy.ts`, dan header itu **tidak sampai pada request RSC**,
+  jadi penjaga memantulkan halaman ganti-password ke dirinya sendiri tanpa
+  henti. Dijaga oleh test yang memeriksa letak berkasnya.
 
 ### Test Fase 2
 
@@ -172,10 +176,12 @@ Tiga role: `admin`, `manager`, `outlet`.
 | Endpoint                                                            | admin | manager |                 outlet                 |
 | ------------------------------------------------------------------- | :---: | :-----: | :------------------------------------: |
 | `/api/sales/*` (summary, daily, top-products, list, detail, export) |  ya   |   ya    | ya, **otomatis terkunci ke outletnya** |
+| `/api/sales/by-group`, `/api/sales/product-groups` (Fase 10)        |  ya   |   ya    | ya, **otomatis terkunci ke outletnya** |
 | `/api/sales/by-outlet`                                              |  ya   |   ya    |                   —                    |
 | `/api/outlets`                                                      |  ya   |   ya    |                   —                    |
 | `/api/outlets/sync-status`                                          |  ya   |   ya    |                   ya                   |
 | `/api/api-keys/*`                                                   |  ya   |    —    |                   —                    |
+| `/api/product-groups/*` (Fase 10)                                   |  ya   |    —    |                   —                    |
 | `/api/users/*`                                                      |  ya   |    —    |                   —                    |
 
 Penting: untuk role `outlet`, parameter `?outlet=` **diabaikan server**.
@@ -201,7 +207,7 @@ menjaga), tapi supaya tidak membingungkan.
 
 ---
 
-## Fase 4 — Dashboard ⚠️ tunggu 0.5 beres
+## Fase 4 — Dashboard
 
 - [x] 4.1 Filter global: rentang tanggal + outlet (outlet hanya admin/manager).
 - [x] 4.2 Kartu ringkasan — `GET /api/sales/summary`
@@ -238,19 +244,19 @@ menjaga), tapi supaya tidak membingungkan.
       dari header `Content-Disposition`.
 - [x] 5.5 Tandai transaksi `Deleted=1` (void) secara visual.
 
-      Backend (`sync-api`) kini mengekspos `deleted` di `SaleResponse` —
-          aditif, tanpa migrasi karena kolomnya sudah ada. Dikunci 5 test.
+  Backend (`sync-api`) kini mengekspos `deleted` di `SaleResponse` —
+  aditif, tanpa migrasi karena kolomnya sudah ada. Dikunci 5 test.
 
-          Frontend memakai kolom itu, bukan lagi menebak lewat `void_staff_id`.
-          Penting karena `Deleted` adalah kolom yang **sama** yang dipakai
-          endpoint laporan untuk mengecualikan baris: penanda yang berbeda
-          membuat tabel dan kartu ringkasan bercerita beda soal struk yang sama.
+  Frontend memakai kolom itu, bukan lagi menebak lewat `void_staff_id`.
+  Penting karena `Deleted` adalah kolom yang **sama** yang dipakai
+  endpoint laporan untuk mengecualikan baris: penanda yang berbeda
+  membuat tabel dan kartu ringkasan bercerita beda soal struk yang sama.
 
-          Catatan lama yang masih berlaku: `/api/sales/` **masih menyertakan**
-          transaksi void, sedangkan endpoint laporan mengecualikannya —
-          inkonsistensi yang backend sengaja tunda (item 4.5 di `TODO.md`
-          sync-api). Sampai diputuskan, angka di tabel dan di kartu ringkasan
-          bisa berbeda.
+  Catatan lama yang masih berlaku: `/api/sales/` **masih menyertakan**
+  transaksi void, sedangkan endpoint laporan mengecualikannya —
+  inkonsistensi yang backend sengaja tunda (item 4.5 di `TODO.md`
+  sync-api). Sampai diputuskan, angka di tabel dan di kartu ringkasan
+  bisa berbeda.
 
 ### Test Fase 5
 
@@ -284,7 +290,10 @@ menjaga), tapi supaya tidak membingungkan.
       (password minimal 8 karakter; role `outlet` **wajib** `outlet_code` → 422)
 - [x] 6.9 Ubah — `PATCH /api/users/{id}` `{full_name?, role?, outlet_code?, is_active?}`
 - [x] 6.10 Reset password — `POST /api/users/{id}/password`
-- [x] 6.11 Tampilkan pagar backend sebagai UI, jangan biarkan jadi error 400: - akun sendiri tidak bisa dinonaktifkan / diturunkan → matikan tombolnya - admin aktif terakhir tidak bisa diturunkan / dinonaktifkan - `email` tidak bisa diubah → field dikunci saat edit
+- [x] 6.11 Tampilkan pagar backend sebagai UI, jangan biarkan jadi error 400:
+  - akun sendiri tidak bisa dinonaktifkan / diturunkan → matikan tombolnya
+  - admin aktif terakhir tidak bisa diturunkan / dinonaktifkan
+  - `email` tidak bisa diubah → field dikunci saat edit
 
 ### Test Fase 6
 
@@ -345,15 +354,15 @@ keduanya justru yang ingin ditangkap. Jalankan dengan `npm run test:e2e`.
       Ambang 80% (stmt/branch/func/line) di `vitest.config.mts`, dijalankan
       lewat `npm run test:coverage`. Saat ini 89% stmt / 82% branch.
 
-      Provider **istanbul**, bukan v8: `@vitest/coverage-v8` menuntut Node >=
-          22 sedangkan mesin ini Node 20 dan diam-diam melaporkan 0%. Versinya
-          juga harus dikunci sama dengan vitest (4.1.11) — `--legacy-peer-deps`
-          sempat memasang v5 yang gagal dengan `coverageFilesDirectory is
-          required`.
+  Provider **istanbul**, bukan v8: `@vitest/coverage-v8` menuntut Node >=
+  22 sedangkan mesin ini Node 20 dan diam-diam melaporkan 0%. Versinya
+  juga harus dikunci sama dengan vitest (4.1.11) — `--legacy-peer-deps`
+  sempat memasang v5 yang gagal dengan
+  `coverageFilesDirectory is required`.
 
-          `session.ts` dan `current-user.ts` dikecualikan: keduanya `server-only`
-          dan memanggil `cookies()`, jadi tidak bisa dijalankan di jsdom sama
-          sekali. Jalurnya diverifikasi langsung ke server yang berjalan.
+  `session.ts` dan `current-user.ts` dikecualikan: keduanya `server-only`
+  dan memanggil `cookies()`, jadi tidak bisa dijalankan di jsdom sama
+  sekali. Jalurnya diverifikasi langsung ke server yang berjalan.
 
 - [x] 8.6 Error boundary + halaman 500.
       `app/(app)/error.tsx` (shell tetap terpasang, jadi user bisa pindah
@@ -366,10 +375,10 @@ keduanya justru yang ingin ditangkap. Jalankan dengan `npm run test:e2e`.
       sandi, tabel status sync, dan halaman 403 — nol pelanggaran. Plus urutan
       Tab dan kirim-dengan-Enter.
 
-      Warna grafik divalidasi terpisah terhadap permukaan kartu yang
-          sebenarnya (`#ffffff` terang, `#171717` gelap): kontras >= 3:1 di kedua
-          mode. Status sync dan penanda void selalu memakai ikon + teks, tidak
-          pernah warna saja.
+  Warna grafik divalidasi terpisah terhadap permukaan kartu yang
+  sebenarnya (`#ffffff` terang, `#171717` gelap): kontras >= 3:1 di kedua
+  mode. Status sync dan penanda void selalu memakai ikon + teks, tidak
+  pernah warna saja.
 
 ---
 
@@ -393,6 +402,160 @@ keduanya justru yang ingin ditangkap. Jalankan dengan `npm run test:e2e`.
 
 ---
 
+## Fase 10 — Product Group Dinamis
+
+Dicatat: 2026-09-15 · Status: **selesai (10.1–10.20)** — 230 unit test, 33/33 E2E, lint, typecheck, dan ambang cakupan lolos.
+Ditinjau ulang 2026-09-16: dua bug ditemukan dan diperbaiki, lihat catatan di
+10.9 (chip hilang saat daftar gagal) dan 10.12 (`offset` terbawa saat filter
+diganti — merusak paginasi halaman transaksi).
+
+> **Penomoran.** Di `sync-api/TODO.md` ini "Fase 6", tapi Fase 6 di dokumen ini
+> sudah dipakai Administrasi. Keputusan lengkapnya (A1–A5) ada di sana.
+
+Dulu backend hanya mengenal `COLORPLATE` yang tertanam di kode. Sekarang group
+yang dipublish ke RabbitMQ diatur admin lewat tabel `product_group_mappings`.
+**Tanpa halaman ini, group baru hanya bisa ditambahkan lewat API langsung.**
+
+Fakta dari backend:
+
+- **Nama group dinormalisasi:** spasi di ujung dibuang, huruf besar.
+  `colorplate ` tersimpan sebagai `COLORPLATE`. Response selalu dalam bentuk
+  normal — jangan membandingkannya dengan input mentah user.
+- **Tidak ada DELETE** (`405`). Group dimatikan lewat `PATCH`. Nama tidak bisa
+  diubah; salah ketik = buat baru, nonaktifkan yang lama.
+- **`409`** untuk duplikat, termasuk group yang sedang nonaktif.
+- **Dua daftar yang berbeda — jangan tertukar di UI:**
+  `/api/sales/product-groups` = group yang **ada di data** (ter-scope outlet);
+  `/api/product-groups` = group yang **dipublish** (admin).
+- `/api/sales/by-group` masih **ikut menghitung** transaksi `Deleted=1`, sama
+  seperti `/colorplate` (backend TODO 4.5) — angkanya bisa beda dengan kartu
+  ringkasan.
+- Mengaktifkan group baru langsung mengubah event RabbitMQ pada publish
+  berikutnya. Consumer harus sudah siap menerima event tanpa field `platecolor`.
+
+### Tipe & kontrak
+
+- [x] 10.1 `src/types/api.ts` di-generate ulang (2026-09-15) — hanya penambahan,
+      `tsc --noEmit` lolos.
+- [x] 10.2 `openapi.json` diperbarui (30 path, format ringkas sama seperti
+      response FastAPI). `api.ts` yang di-generate dari salinan ini **identik** dengan
+      hasil generate sebelumnya, jadi generate tanpa backend tidak lagi mundur.
+      Catatan: `openapi.json` ada di `.gitignore` (baris 42) — salinannya **hanya
+      lokal**, tidak ikut commit. Mesin lain tetap perlu `npm run gen:api` ke backend
+      yang hidup.
+- [x] 10.3 Diverifikasi ke server yang berjalan (uvicorn terhadap salinan database
+      `maharasa_pos_uji`): **22/22 sesuai kontrak di lampiran** — 200/201 admin,
+      401 tanpa token, 403 manager & outlet di `/api/product-groups`, 403 outlet
+      meminta outlet lain, 404 id tidak ada, 405 `DELETE`, 409 duplikat, 422 nama
+      kosong/spasi atau `is_active` tidak dikirim.
+
+### Kelola mapping (admin)
+
+- [x] 10.4 Halaman `/product-group` — entri `NAV` dengan `roles: ["admin"]` di
+      `src/lib/auth/access.ts`, plus ikon baru di union `icon` (`group` → lucide
+      `Layers`). Halaman: `src/app/(app)/product-group/page.tsx`, dibungkus
+      `RequireRole` seperti `/api-keys`.
+- [x] 10.5 Daftar — `GET /api/product-groups` →
+      `[{id, product_group, is_active, created_at, updated_at}]`, termasuk yang
+      nonaktif. Status pakai ikon + teks, bukan warna saja (8.7).
+- [x] 10.6 Tambah — `POST /api/product-groups` `{product_group, is_active?}` → `201`.
+  - `409` → "group ini sudah terdaftar — aktifkan dari daftar", bukan
+    "terjadi kesalahan" (pola 6.2).
+  - `422` (kosong, spasi saja, > 255 karakter) → pesan di field.
+  - Pratinjau bentuk normal: "akan tersimpan sebagai `COLORPLATE`".
+  - Sarankan group dari `/api/sales/product-groups` yang belum dipetakan.
+
+  Aturan normalisasi ditiru di `src/lib/product-group.ts`, **hanya spasi** yang
+  dibuang (bukan `trim()`), sama dengan `strip(" ")` di backend — pratinjau yang
+  lebih rajin akan menjanjikan nama yang tidak pernah tersimpan. Nama tetap
+  dikirim mentah; normalisasi wewenang backend. Kosong/spasi/> 255 ditolak di
+  klien tanpa request; 422 dari server tetap dipetakan ke field. `is_active`
+  tidak ditawarkan di form — group baru selalu aktif (default backend).
+  Saran mengecualikan group yang sudah terdaftar **walau nonaktif**, karena
+  menambahkannya pasti 409.
+
+- [x] 10.7 Aktif/nonaktif — `PATCH /api/product-groups/{id}` `{is_active}`, dengan
+      konfirmasi: berlaku pada publish berikutnya dan mengubah event yang diterima
+      consumer.
+      Konfirmasi klik biasa, bukan ketik-ulang seperti 6.6: efeknya baru terasa
+      di publish berikutnya dan bisa dibalik dengan satu klik, beda dengan
+      rotate/revoke yang langsung mematikan POS.
+- [x] 10.8 Tanpa tombol hapus. Jelaskan singkat di halaman kenapa: barisnya
+      disimpan sebagai jejak group apa saja yang pernah dipublish.
+
+### Rekap per group (dashboard)
+
+- [x] 10.9 Dropdown group — `GET /api/sales/product-groups` → `string[]`, ikut
+      filter outlet (role `outlet` otomatis ter-scope).
+      Hook `useSalesProductGroups` dipakai bersama oleh rekap (10.10), filter
+      Produk terlaris (10.11), dan saran di halaman kelola (10.6). Di rekap,
+      bentuknya tombol pilih-banyak (`aria-pressed`), bukan `Select`, karena
+      beberapa group bisa dipilih sekaligus.
+      Kalau daftarnya gagal dimuat, chip untuk group yang sedang terpilih tetap
+      dirender (plus tautan muat ulang): rekap di bawahnya memakai pilihan itu,
+      jadi harus tetap ada cara melepasnya.
+- [x] 10.10 Rekap — `GET /api/sales/by-group?product_group=A&product_group=B&outlet&start_date&end_date`
+      → `[{product_group, product_name, outlet_code, sale_date, sold}]`.
+      Beberapa group dikirim sebagai **param berulang**, bukan dipisah koma.
+      `sold` bisa desimal.
+      `src/components/dashboard/group-recap.tsx`. Tanpa group terpilih tidak ada
+      request sama sekali (backend mewajibkan `product_group`). Catatan void
+      (`Deleted=1` ikut terhitung) ditulis di deskripsi kartu.
+
+  **Perbaikan di client HTTP:** `buildUrl` tadinya `params.set` + `String(value)`,
+  jadi array terkirim sebagai `COLORPLATE,,PROMO BANDUNG` — satu group yang tidak
+  ada, hasilnya diam-diam kosong. Sekarang array → `append` per nilai.
+
+- [x] 10.11 Filter `product_group` di Produk terlaris (4.5) memakai dropdown yang
+      sama (10.9). **Tidak lagi terblokir:** backend kini menormalisasi filter
+      `top-products` seperti `by-group`, dan varian nama untuk produk yang sama
+      digabung jadi satu baris. Terverifikasi di server: `' promo bandung'`
+      menemukan item yang tersimpan sebagai `' PROMO BANDUNG'`.
+      `top-products` hanya menerima **satu** group, jadi pilihannya terpisah
+      dari rekap: `Select` tunggal di header kartu.
+- [x] 10.12 Group terpilih tersimpan di URL bersama filter lain (pola 4.8).
+      Param: `product_group` (berulang, rekap) dan `top_product_group` (tunggal,
+      Produk terlaris). `filterKeSearchParams` kini membawa param lain di URL —
+      sebelumnya mengganti tanggal atau outlet diam-diam mengosongkan pilihan
+      group.
+
+  **`offset` justru dibuang, dan itu disengaja.** `FilterBar` dipakai juga di
+  halaman transaksi, yang menyimpan nomor halaman di URL. Saat "bawa param lain"
+  ditambahkan, mengganti rentang tanggal dari halaman 3 mempertahankan
+  `offset=100`: hasil filter baru dibuka di baris ke-101 dan tabelnya tampak
+  kosong padahal datanya ada. Dikunci di `filter.test.ts` dan
+  `filter-bar.test.tsx` — halaman transaksi tidak punya test khusus untuk ini,
+  jadi pagarnya dipasang di komponen yang dipakai bersama.
+
+- [x] 10.13 Jangan pakai `/api/sales/colorplate` untuk komponen baru — itu hanya
+      alias lama; pakai `by-group`.
+
+### Test Fase 10
+
+- [x] 10.14 `409` saat menambah duplikat → pesan mengarahkan ke daftar.
+      `src/components/admin/product-groups-view.test.tsx`, termasuk memastikan
+      istilah "PATCH" dari `detail` backend tidak bocor ke judul pesan.
+- [x] 10.15 Menonaktifkan memanggil `PATCH`; tidak pernah ada request `DELETE`.
+      Semua request selama test direkam lewat `server.events` MSW — bukan
+      sekadar "tombol hapus tidak ada".
+- [x] 10.16 Manager & outlet tidak melihat menu Product Group; membuka URL-nya → 403
+      dan isi halaman tidak ikut terkirim (pola 3.9).
+      Unit: `access.test.ts` (menu + `bolehMasukHalaman`). E2E:
+      `e2e/peran.spec.ts` (manager membuka `/product-group`).
+- [x] 10.17 Beberapa group terkirim sebagai param berulang.
+      Dikunci di dua lapis: `client.test.ts` (bentuk URL) dan
+      `group-recap.test.tsx` (komponen mengirim keduanya).
+- [x] 10.18 Rekap kosong → pesan, bukan tabel kosong (pola 4.11).
+- [x] 10.19 E2E: `e2e/mock-backend.mjs` ditambah endpoint baru; alur tambah →
+      nonaktifkan → aktifkan kembali.
+      `e2e/product-group.spec.ts`. Backend tiruan sengaja **tidak** memecah
+      `A,B`, persis FastAPI, supaya E2E ikut menangkap bentuk param yang salah.
+- [x] 10.20 axe-core pada halaman kelola product group (8.7).
+      `src/test/a11y.test.tsx` — halaman kelola (termasuk tombol saran) dan
+      kartu rekap per group, nol pelanggaran WCAG A/AA.
+
+---
+
 ## Lampiran — Kontrak API terverifikasi
 
 Base URL: `http://localhost:8000` · Auth: `Authorization: Bearer <access_token>`
@@ -413,7 +576,9 @@ GET    /api/sales/daily             ?outlet&start_date&end_date
 GET    /api/sales/by-outlet         ?start_date&end_date          [admin, manager]
 GET    /api/sales/top-products      ?outlet&start_date&end_date&product_group&limit
 GET    /api/sales/export            ?outlet&start_date&end_date   -> CSV stream
-GET    /api/sales/colorplate        ?outlet&start_date&end_date
+GET    /api/sales/colorplate        ?outlet&start_date&end_date   (alias lama by-group COLORPLATE)
+GET    /api/sales/by-group          ?product_group (wajib, boleh diulang)&outlet&start_date&end_date
+GET    /api/sales/product-groups    ?outlet                       -> string[]
 GET    /api/sales/{transaction_id}
 
 GET    /api/outlets                                               [admin, manager]
@@ -429,6 +594,10 @@ POST   /api/users                   {email,password,role,outlet_code?,full_name?
 GET    /api/users/{id}                                            [admin]
 PATCH  /api/users/{id}              {full_name?,role?,outlet_code?,is_active?}    [admin]
 POST   /api/users/{id}/password     {password}                    [admin]
+
+GET    /api/product-groups                                        [admin] termasuk nonaktif
+POST   /api/product-groups          {product_group, is_active?}   [admin] 201 / 409 / 422
+PATCH  /api/product-groups/{id}     {is_active}                   [admin] 404; tanpa DELETE (405)
 
 GET    /health        /health/ready
 ```

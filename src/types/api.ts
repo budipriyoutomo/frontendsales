@@ -153,6 +153,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales/by-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sales By Group
+         * @description Rekap qty terjual per product group — versi dinamis dari `/colorplate`.
+         */
+        get: operations["get_sales_by_group_api_sales_by_group_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Product Groups
+         * @description Group yang pernah muncul di data penjualan, untuk dropdown.
+         *
+         *     Berbeda dari `/api/product-groups` (admin): itu daftar group yang
+         *     DIPUBLISH, ini daftar group yang ADA di data.
+         */
+        get: operations["list_product_groups_api_sales_product_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales/summary": {
         parameters: {
             query?: never;
@@ -288,6 +331,10 @@ export interface paths {
         /**
          * Publish Sales
          * @description Dipicu mesin POS, bukan dashboard — karena itu tetap pakai API key outlet.
+         *
+         *     Group yang dipublish dibaca dari `product_group_mappings` yang aktif.
+         *     Gagal di tengah tetap seperti sebelumnya: 500, event yang sudah terkirim
+         *     tidak ditarik kembali (TODO 3.4).
          */
         post: operations["publish_sales_api_sales_publish_post"];
         delete?: never;
@@ -467,6 +514,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Product Groups
+         * @description Semua mapping, termasuk yang nonaktif.
+         */
+        get: operations["list_product_groups_api_product_groups_get"];
+        put?: never;
+        /**
+         * Create Product Group
+         * @description Tambah group yang ikut dipublish ke RabbitMQ.
+         *
+         *     Group yang sudah terdaftar ditolak 409, termasuk yang sedang nonaktif —
+         *     aktifkan kembali lewat PATCH, jangan dibuat ulang.
+         */
+        post: operations["create_product_group_api_product_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/product-groups/{mapping_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Product Group
+         * @description Aktifkan / nonaktifkan group. Berlaku pada publish berikutnya.
+         */
+        patch: operations["update_product_group_api_product_groups__mapping_id__patch"];
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -636,6 +730,19 @@ export interface components {
             /** Outlet Code */
             outlet_code: string;
         };
+        /**
+         * CreateProductGroupMappingRequest
+         * @description Nama dinormalisasi oleh service: `colorplate ` tersimpan sebagai `COLORPLATE`.
+         */
+        CreateProductGroupMappingRequest: {
+            /** Product Group */
+            product_group: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
         /** CreateUserRequest */
         CreateUserRequest: {
             /**
@@ -735,6 +842,74 @@ export interface components {
             total: number;
             /** Has More */
             has_more: boolean;
+        };
+        /** ProductGroupListResponse */
+        ProductGroupListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: string[];
+        };
+        /** ProductGroupMappingDetailResponse */
+        ProductGroupMappingDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ProductGroupMappingResponse"];
+        };
+        /** ProductGroupMappingListResponse */
+        ProductGroupMappingListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ProductGroupMappingResponse"][];
+        };
+        /** ProductGroupMappingResponse */
+        ProductGroupMappingResponse: {
+            /** Id */
+            id: number;
+            /** Product Group */
+            product_group: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** ProductGroupSalesListResponse */
+        ProductGroupSalesListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ProductGroupSalesRow"][];
+        };
+        /**
+         * ProductGroupSalesRow
+         * @description Versi generik `ColorplateRow` — membawa nama group (bentuk normal).
+         */
+        ProductGroupSalesRow: {
+            /** Product Group */
+            product_group: string;
+            /** Product Name */
+            product_name?: string | null;
+            /** Outlet Code */
+            outlet_code?: string | null;
+            /** Sale Date */
+            sale_date?: string | null;
+            /** Sold */
+            sold: number;
         };
         /** PublishResponse */
         PublishResponse: {
@@ -1253,6 +1428,18 @@ export interface components {
             total_amount: number;
         };
         /**
+         * UpdateProductGroupMappingRequest
+         * @description Hanya status aktif.
+         *
+         *     Nama sengaja tidak bisa diubah: mengganti nama sama dengan diam-diam
+         *     berhenti mempublish group lama. Kalau salah ketik, buat mapping baru lalu
+         *     nonaktifkan yang lama — jejaknya tetap terlihat.
+         */
+        UpdateProductGroupMappingRequest: {
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
          * UpdateUserRequest
          * @description Semua field opsional — hanya yang dikirim yang diubah.
          *
@@ -1587,6 +1774,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ColorplateListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sales_by_group_api_sales_by_group_get: {
+        parameters: {
+            query: {
+                /** @description Nama product group; ulangi param untuk beberapa group. Tidak peka huruf besar/kecil dan spasi di ujung. */
+                product_group: string[];
+                /** @description Kode outlet; diabaikan untuk role 'outlet' */
+                outlet?: string | null;
+                /** @description Tanggal awal (inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal akhir (inklusif) */
+                end_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupSalesListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_groups_api_sales_product_groups_get: {
+        parameters: {
+            query?: {
+                /** @description Kode outlet; diabaikan untuk role 'outlet' */
+                outlet?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2127,6 +2384,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_groups_api_product_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupMappingListResponse"];
+                };
+            };
+        };
+    };
+    create_product_group_api_product_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductGroupMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupMappingDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_group_api_product_groups__mapping_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductGroupMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupMappingDetailResponse"];
                 };
             };
             /** @description Validation Error */

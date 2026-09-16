@@ -2,11 +2,20 @@
 
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { IsiKartu } from "@/components/dashboard/states";
-import { useTopProducts } from "@/hooks/use-sales";
+import { useSalesProductGroups, useTopProducts } from "@/hooks/use-sales";
 import { formatAngka, formatRupiah } from "@/lib/format";
 import type { Filter } from "@/lib/filter";
 import type { TopProductRow } from "@/types/domain";
@@ -28,15 +37,60 @@ import type { TopProductRow } from "@/types/domain";
  * peringkat) dan batang hanya bisa menunjukkan satu di antaranya. Panjang
  * batang tipis di kolom omzet dipakai sebagai bantuan baca, bukan pengganti
  * angkanya.
+ *
+ * Filter grup memakai daftar yang sama dengan rekap per group (10.9, 10.11);
+ * nilainya dipegang pemanggil supaya tersimpan di URL (10.12).
  */
-export function TopProducts({ filter }: { filter: Filter }) {
-  const query = useTopProducts(filter, 10);
+
+/** Nilai sentinel — `Select` tidak menerima item bernilai string kosong. */
+const SEMUA_GRUP = "__semua__";
+
+export function TopProducts({
+  filter,
+  group,
+  onGroupChange,
+}: {
+  filter: Filter;
+  group?: string;
+  onGroupChange: (group: string | undefined) => void;
+}) {
+  const query = useTopProducts(filter, 10, group);
+  const daftar = useSalesProductGroups(filter.outlet);
+
+  const pilihan = [...(daftar.data ?? [])];
+  if (group && !pilihan.includes(group)) pilihan.push(group);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle as="h2">Produk terlaris</CardTitle>
-        <CardDescription>10 produk dengan omzet tertinggi</CardDescription>
+        <CardDescription>
+          10 produk dengan omzet tertinggi
+          {group ? ` di grup ${group}` : ""}
+        </CardDescription>
+        <CardAction>
+          <Label htmlFor="top_product_group" className="sr-only">
+            Grup
+          </Label>
+          <Select
+            value={group ?? SEMUA_GRUP}
+            onValueChange={(v) =>
+              onGroupChange(v === SEMUA_GRUP ? undefined : v)
+            }
+          >
+            <SelectTrigger id="top_product_group" size="sm" className="w-40">
+              <SelectValue placeholder="Semua grup" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={SEMUA_GRUP}>Semua grup</SelectItem>
+              {pilihan.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardAction>
       </CardHeader>
       <CardContent>
         <IsiKartu<TopProductRow[]>

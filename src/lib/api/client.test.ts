@@ -209,6 +209,41 @@ describe("createApiClient — query string", () => {
     expect(q.has("end_date")).toBe(false);
     expect(q.has("product_group")).toBe(false);
   });
+
+  it("mengirim array sebagai param berulang, bukan dipisah koma (10.17)", async () => {
+    let url = "";
+    server.use(
+      http.get(`${BASE}/api/sales/by-group`, ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    await client("t").request("/api/sales/by-group", {
+      query: { product_group: ["COLORPLATE", "", "PROMO BANDUNG"] },
+    });
+
+    const q = new URL(url).searchParams;
+    // FastAPI `List[str]` hanya mengenal bentuk `?a=1&a=2`; "A,B" akan
+    // dibaca sebagai satu group bernama "A,B" dan diam-diam kosong.
+    expect(q.getAll("product_group")).toEqual(["COLORPLATE", "PROMO BANDUNG"]);
+  });
+
+  it("tidak mengirim param sama sekali untuk array kosong", async () => {
+    let url = "";
+    server.use(
+      http.get(`${BASE}/api/sales/top-products`, ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    await client("t").request("/api/sales/top-products", {
+      query: { product_group: [] },
+    });
+
+    expect(new URL(url).searchParams.has("product_group")).toBe(false);
+  });
 });
 
 describe("createApiClient — penanganan error seragam (1.6)", () => {

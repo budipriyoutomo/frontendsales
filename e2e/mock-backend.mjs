@@ -102,9 +102,49 @@ const state = {
     created_at: "2026-09-01T08:00:00",
     updated_at: null,
   })),
+  /** Group yang dipublish (TODO Fase 10). */
+  productGroups: [
+    {
+      id: 1,
+      product_group: "COLORPLATE",
+      is_active: true,
+      created_at: "2026-09-01T08:00:00",
+      updated_at: null,
+    },
+  ],
   /** Dinyalakan test untuk memaksa access token berikutnya ditolak (2.12). */
   paksa401Sekali: false,
 };
+
+/** Sama dengan `normalize_product_group` di backend: hanya SPASI di ujung. */
+const normalGroup = (v) => String(v ?? "").replace(/^ +| +$/g, "").toUpperCase();
+
+/** Group yang ADA di data penjualan — beda dengan yang dipublish. */
+const GROUP_DI_DATA = ["COLORPLATE", "MAKANAN", "MINUMAN"];
+
+const REKAP_GROUP = [
+  {
+    product_group: "COLORPLATE",
+    product_name: "Piring Merah",
+    outlet_code: "OUTLET_001",
+    sale_date: "2026-09-12",
+    sold: 4,
+  },
+  {
+    product_group: "COLORPLATE",
+    product_name: "Piring Biru",
+    outlet_code: "OUTLET_002",
+    sale_date: "2026-09-12",
+    sold: 2.5,
+  },
+  {
+    product_group: "MINUMAN",
+    product_name: "Es Teh Manis",
+    outlet_code: "OUTLET_001",
+    sale_date: "2026-09-11",
+    sold: 12,
+  },
+];
 
 const SALES = Array.from({ length: 120 }, (_, i) => ({
   transaction_id: i + 1,
@@ -235,7 +275,10 @@ const server = createServer(async (req, res) => {
   }
 
   // ---- penjaga role, meniru backend ---------------------------------
-  const butuhAdmin = path.startsWith("/api/api-keys") || path.startsWith("/api/users");
+  const butuhAdmin =
+    path.startsWith("/api/api-keys") ||
+    path.startsWith("/api/users") ||
+    path.startsWith("/api/product-groups");
   if (butuhAdmin && user.role !== "admin") {
     return tolak(res, 403, "Akses ditolak");
   }
@@ -290,25 +333,58 @@ const server = createServer(async (req, res) => {
   }
 
   if (path === "/api/sales/top-products") {
+    // Filter group dinormalisasi seperti by-group (backend TODO, 10.11).
+    const group = normalGroup(url.searchParams.get("product_group"));
     return json(
       res,
       200,
-      bungkus([
-        {
-          product_id: 5,
-          product_name: "Es Teh Manis",
-          product_group: "Minuman",
-          total_qty: 120,
-          total_amount: 960000,
-        },
-        {
-          product_id: 8,
-          product_name: "Nasi Goreng",
-          product_group: "Makanan",
-          total_qty: 80,
-          total_amount: 1600000,
-        },
-      ]),
+      bungkus(
+        [
+          {
+            product_id: 5,
+            product_name: "Es Teh Manis",
+            product_group: "Minuman",
+            total_qty: 120,
+            total_amount: 960000,
+          },
+          {
+            product_id: 8,
+            product_name: "Nasi Goreng",
+            product_group: "Makanan",
+            total_qty: 80,
+            total_amount: 1600000,
+          },
+        ].filter((p) => !group || normalGroup(p.product_group) === group),
+      ),
+    );
+  }
+
+  if (path === "/api/sales/product-groups") {
+    return json(res, 200, bungkus(GROUP_DI_DATA));
+  }
+
+  if (path === "/api/sales/by-group") {
+    // Beberapa group = param berulang. Bentuk "A,B" sengaja TIDAK dipecah,
+    // persis seperti FastAPI `List[str]` — supaya E2E menangkap kalau
+    // frontend mengirim bentuk yang salah (10.17).
+    const groups = url.searchParams.getAll("product_group").map(normalGroup);
+    if (groups.length === 0) {
+      return json(res, 422, {
+        detail: [
+          { loc: ["query", "product_group"], msg: "Field required", type: "missing" },
+        ],
+      });
+    }
+    return json(
+      res,
+      200,
+      bungkus(
+        REKAP_GROUP.filter(
+          (r) =>
+            groups.includes(r.product_group) &&
+            (!outletScope || r.outlet_code === outletScope),
+        ),
+      ),
     );
   }
 
@@ -512,6 +588,60 @@ const server = createServer(async (req, res) => {
   const setPass = /^\/api\/users\/(\d+)\/password$/.exec(path);
   if (setPass && method === "POST") {
     return json(res, 200, { success: true, message: "direset" });
+  }
+
+  // ---- product group (Fase 10) --------------------------------------
+  if (path === "/api/product-groups" && method === "GET") {
+    const urut = [...state.productGroups].sort((a, b) =>
+      a.product_group.localeCompare(b.product_group),
+    );
+    return json(res, 200, bungkus(urut));
+  }
+
+  if (path === "/api/product-groups" && method === "POST") {
+    const body = await bacaBody(req);
+    const normal = normalGroup(body.product_group);
+    if (!normal) return tolak(res, 422, "product_group tidak boleh kosong");
+    if (normal.length > 255) {
+      return tolak(res, 422, "product_group maksimal 255 karakter");
+    }
+    if (state.productGroups.some((g) => g.product_group === normal)) {
+      return tolak(
+        res,
+        409,
+        `Product group '${normal}' sudah terdaftar. Aktifkan lewat PATCH kalau sedang nonaktif.`,
+      );
+    }
+    const baru = {
+      id: Math.max(0, ...state.productGroups.map((g) => g.id)) + 1,
+      product_group: normal,
+      is_active: body.is_active !== false,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+    };
+    state.productGroups.push(baru);
+    return json(res, 201, bungkus(baru));
+  }
+
+  const group = /^\/api\/product-groups\/(\d+)$/.exec(path);
+  if (group && method === "DELETE") {
+    // Backend tidak punya DELETE sama sekali.
+    return tolak(res, 405, "Method Not Allowed");
+  }
+  if (group && method === "PATCH") {
+    const target = state.productGroups.find((g) => g.id === Number(group[1]));
+    if (!target) return tolak(res, 404, "Product group tidak ditemukan");
+    const body = await bacaBody(req);
+    if (typeof body.is_active !== "boolean") {
+      return json(res, 422, {
+        detail: [
+          { loc: ["body", "is_active"], msg: "Field required", type: "missing" },
+        ],
+      });
+    }
+    target.is_active = body.is_active;
+    target.updated_at = new Date().toISOString();
+    return json(res, 200, bungkus(target));
   }
 
   return tolak(res, 404, `Tidak ada rute ${method} ${path}`);

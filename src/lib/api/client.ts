@@ -18,8 +18,12 @@ export type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   /** Dikirim sebagai JSON. Nilai `undefined` berarti tanpa body. */
   body?: unknown;
-  /** Nilai `null`/`undefined`/string kosong dibuang, tidak dikirim. */
-  query?: Record<string, QueryValue>;
+  /**
+   * Nilai `null`/`undefined`/string kosong dibuang, tidak dikirim.
+   * Array dikirim sebagai param berulang (`?a=1&a=2`), bentuk yang dikenali
+   * FastAPI untuk `List[str]` (TODO 10.10).
+   */
+  query?: Record<string, QueryValue | readonly QueryValue[]>;
   headers?: Record<string, string>;
   signal?: AbortSignal;
   cache?: RequestCache;
@@ -109,15 +113,18 @@ export class NetworkError extends Error {
 function buildUrl(
   baseUrl: string,
   path: string,
-  query?: Record<string, QueryValue>,
+  query?: RequestOptions["query"],
 ): string {
   const url = `${baseUrl.replace(/\/$/, "")}${path}`;
   if (!query) return url;
 
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value === null || value === undefined || value === "") continue;
-    params.set(key, String(value));
+  for (const [key, raw] of Object.entries(query)) {
+    const values: readonly QueryValue[] = Array.isArray(raw) ? raw : [raw];
+    for (const value of values) {
+      if (value === null || value === undefined || value === "") continue;
+      params.append(key, String(value));
+    }
   }
 
   const qs = params.toString();

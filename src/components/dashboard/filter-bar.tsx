@@ -48,7 +48,12 @@ export function FilterBar({ role }: { role: Role }) {
   const outlets = useOutlets(tampilkanOutlet);
 
   function terapkan(berikutnya: Filter) {
-    const params = filterKeSearchParams(berikutnya);
+    // URL yang berlaku ikut dibawa, supaya group terpilih (10.12) tidak
+    // hilang setiap kali tanggal atau outlet diganti.
+    const params = filterKeSearchParams(
+      berikutnya,
+      new URLSearchParams(searchParams.toString()),
+    );
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 

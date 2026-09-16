@@ -49,6 +49,45 @@ describe("FilterBar — rentang tanggal (4.1, 4.8, 4.10)", () => {
     expect(terakhir).toContain("end_date=2026-03-31");
   });
 
+  it("mengganti tanggal tidak mengosongkan group terpilih (10.12)", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&product_group=A&product_group=B",
+    );
+    renderWithQuery(<FilterBar role="admin" />);
+
+    fireEvent.change(screen.getByLabelText(/sampai tanggal/i), {
+      target: { value: "2026-03-20" },
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    const terakhir = replace.mock.calls.at(-1)![0] as string;
+    const params = new URLSearchParams(terakhir.split("?")[1]);
+    expect(params.get("end_date")).toBe("2026-03-20");
+    expect(params.getAll("product_group")).toEqual(["A", "B"]);
+  });
+
+  it("mengganti tanggal mengembalikan paginasi ke halaman pertama", async () => {
+    // FilterBar juga dipakai di halaman transaksi, yang menyimpan `offset`
+    // di URL. Filter baru dengan offset lama = halaman kosong yang
+    // menyesatkan.
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&offset=100&product_group=A",
+    );
+    renderWithQuery(<FilterBar role="admin" />);
+
+    fireEvent.change(screen.getByLabelText(/dari tanggal/i), {
+      target: { value: "2026-03-05" },
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    const params = new URLSearchParams(
+      (replace.mock.calls.at(-1)![0] as string).split("?")[1],
+    );
+    expect(params.has("offset")).toBe(false);
+    // Yang bukan urusan paginasi tetap dibawa.
+    expect(params.getAll("product_group")).toEqual(["A"]);
+  });
+
   it("menampilkan nilai filter dari URL, bukan dari state sendiri", () => {
     renderWithQuery(<FilterBar role="admin" />);
 

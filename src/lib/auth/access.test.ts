@@ -19,6 +19,7 @@ describe("navUntukRole (3.2, 3.7)", () => {
 
     expect(menu).not.toContain("API Key");
     expect(menu).not.toContain("Pengguna");
+    expect(menu).not.toContain("Product Group");
     // Tapi tetap melihat yang memang haknya.
     expect(menu).toContain("Dashboard");
     expect(menu).toContain("Transaksi");
@@ -41,6 +42,12 @@ describe("bolehMasukHalaman (3.3, 3.9)", () => {
   it("menolak role outlet membuka halaman khusus admin", () => {
     expect(bolehMasukHalaman("outlet", "/pengguna")).toBe(false);
     expect(bolehMasukHalaman("outlet", "/api-keys")).toBe(false);
+  });
+
+  it("halaman product group khusus admin (10.4, 10.16)", () => {
+    expect(bolehMasukHalaman("admin", "/product-group")).toBe(true);
+    expect(bolehMasukHalaman("manager", "/product-group")).toBe(false);
+    expect(bolehMasukHalaman("outlet", "/product-group")).toBe(false);
   });
 
   it("mengizinkan admin ke mana saja", () => {

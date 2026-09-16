@@ -9,6 +9,8 @@ import { LoginForm } from "@/components/auth/login-form";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { SyncStatusView } from "@/components/sync/sync-status-view";
 import { AksesDitolak } from "@/components/auth/akses-ditolak";
+import { ProductGroupsView } from "@/components/admin/product-groups-view";
+import { GroupRecap } from "@/components/dashboard/group-recap";
 
 /**
  * Cek aksesibilitas dasar (TODO 8.7).
@@ -88,6 +90,75 @@ describe("Aksesibilitas dasar (8.7)", () => {
 
   it("halaman 403 bebas pelanggaran", async () => {
     const { container } = render(<AksesDitolak role="manager" />);
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("halaman kelola product group bebas pelanggaran (10.20)", async () => {
+    server.use(
+      http.get("/api/product-groups", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              id: 1,
+              product_group: "COLORPLATE",
+              is_active: true,
+              created_at: "2026-09-01T08:00:00",
+              updated_at: null,
+            },
+            {
+              id: 2,
+              product_group: "PROMO LAMA",
+              is_active: false,
+              created_at: "2026-09-01T08:00:00",
+              updated_at: "2026-09-10T08:00:00",
+            },
+          ],
+        }),
+      ),
+      http.get("/api/sales/product-groups", () =>
+        HttpResponse.json({ success: true, data: ["COLORPLATE", "MINUMAN"] }),
+      ),
+    );
+
+    const { container } = renderWithQuery(<ProductGroupsView />);
+    await screen.findByText("PROMO LAMA");
+    // Saran ikut dirender — tombolnya juga harus lolos pemeriksaan.
+    await screen.findByRole("button", { name: "MINUMAN" });
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("rekap per group bebas pelanggaran", async () => {
+    server.use(
+      http.get("/api/sales/product-groups", () =>
+        HttpResponse.json({ success: true, data: ["COLORPLATE", "MINUMAN"] }),
+      ),
+      http.get("/api/sales/by-group", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              product_group: "COLORPLATE",
+              product_name: "Piring Merah",
+              outlet_code: "OUT1",
+              sale_date: "2026-09-12",
+              sold: 4,
+            },
+          ],
+        }),
+      ),
+    );
+
+    const { container } = renderWithQuery(
+      <GroupRecap
+        filter={{ start_date: "2026-09-01", end_date: "2026-09-12" }}
+        terpilih={["COLORPLATE"]}
+        onTerpilihChange={vi.fn()}
+      />,
+    );
+    await screen.findByText("Piring Merah");
 
     expect(await periksa(container)).toEqual([]);
   });
