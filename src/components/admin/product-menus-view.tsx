@@ -36,7 +36,7 @@ import {
   KeadaanGagal,
   KeadaanKosong,
 } from "@/components/dashboard/states";
-import { useSalesProductGroups } from "@/hooks/use-sales";
+import { useOutlets, useSalesProductGroups } from "@/hooks/use-sales";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
 import { formatTanggal } from "@/lib/format";
@@ -49,6 +49,7 @@ import type {
 
 /** Radix Select tidak menerima value kosong. */
 const SEMUA_GROUP = "__semua__";
+const SEMUA_OUTLET = "__semua__";
 
 /** Jeda sebelum pencarian dikirim — satu request per ketikan terlalu boros. */
 const JEDA_CARI_MS = 300;
@@ -66,6 +67,7 @@ function namaMenu(m: { product_name?: string | null; product_id: number }) {
  */
 export function ProductMenusView() {
   const qc = useQueryClient();
+  const [outlet, setOutlet] = useState(SEMUA_OUTLET);
   const [group, setGroup] = useState(SEMUA_GROUP);
   const [cari, setCari] = useState("");
   const [cariTerkirim, setCariTerkirim] = useState("");
@@ -86,13 +88,24 @@ export function ProductMenusView() {
     queryFn: () => api.request<ProductGroupMapping[]>("/api/product-groups"),
   });
   const diData = useSalesProductGroups();
+  const outlets = useOutlets(true);
 
+  const outletDipilih = outlet === SEMUA_OUTLET ? undefined : outlet;
   const groupDipilih = group === SEMUA_GROUP ? undefined : group;
   const kandidat = useQuery({
-    queryKey: ["product-menu-candidates", groupDipilih ?? "", cariTerkirim],
+    queryKey: [
+      "product-menu-candidates",
+      outletDipilih ?? "",
+      groupDipilih ?? "",
+      cariTerkirim,
+    ],
     queryFn: () =>
       api.request<ProductMenuCandidate[]>("/api/product-menus/candidates", {
-        query: { product_group: groupDipilih, q: cariTerkirim || undefined },
+        query: {
+          outlet: outletDipilih,
+          product_group: groupDipilih,
+          q: cariTerkirim || undefined,
+        },
       }),
   });
 
@@ -164,11 +177,31 @@ export function ProductMenusView() {
           dipublish bersama group aktif; menu yang group-nya sudah aktif tidak
           dikirim dua kali.
         </p>
+        <p className="text-muted-foreground text-sm">
+          Filter outlet hanya untuk mencari menu — ProductID bisa berbeda antar
+          outlet. Menu yang sudah didaftarkan berlaku untuk semua outlet.
+        </p>
       </div>
 
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="menu-outlet">Outlet</Label>
+              <Select value={outlet} onValueChange={setOutlet}>
+                <SelectTrigger id="menu-outlet" className="w-48">
+                  <SelectValue placeholder="Semua outlet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SEMUA_OUTLET}>Semua outlet</SelectItem>
+                  {(outlets.data ?? []).map((o) => (
+                    <SelectItem key={o.outlet_code} value={o.outlet_code}>
+                      {o.outlet_code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="menu-group">Group</Label>
               <Select value={group} onValueChange={setGroup}>
@@ -218,6 +251,7 @@ export function ProductMenusView() {
                   <TableRow>
                     <TableHead>Menu</TableHead>
                     <TableHead>Group</TableHead>
+                    <TableHead>Outlet</TableHead>
                     <TableHead>ProductID</TableHead>
                     <TableHead>Terakhir terjual</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
@@ -237,6 +271,13 @@ export function ProductMenusView() {
                         </TableCell>
                         <TableCell className="font-mono">
                           {c.product_group ?? "—"}
+                        </TableCell>
+                        {/* ProductID bisa berbeda antar outlet, jadi outlet
+                            tempat menu ini terjual perlu terlihat. */}
+                        <TableCell className="font-mono">
+                          {c.outlet_codes?.length
+                            ? c.outlet_codes.join(", ")
+                            : "—"}
                         </TableCell>
                         <TableCell className="font-mono">
                           {c.product_id}

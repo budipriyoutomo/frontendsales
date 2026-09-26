@@ -20,18 +20,21 @@ const kandidat = [
     product_id: 200252,
     product_name: "Blue",
     product_group: "COLORPLATE",
+    outlet_codes: ["STTSM", "STTBDG"],
     last_sale_date: "2026-09-01",
   },
   {
     product_id: 200300,
     product_name: "F birthday cake",
     product_group: "PROMO",
+    outlet_codes: ["STTSM"],
     last_sale_date: "2026-09-01",
   },
   {
     product_id: 309747,
     product_name: "Chicken Katsu",
     product_group: "PROMO BANDUNG",
+    outlet_codes: ["STTBDG"],
     last_sale_date: "2026-09-01",
   },
 ];
@@ -57,12 +60,27 @@ beforeEach(() => {
       HttpResponse.json({ success: true, data: terdaftar }),
     ),
     http.get("/api/product-menus/candidates", ({ request }) => {
-      const q = new URL(request.url).searchParams.get("q");
-      const data = q
-        ? kandidat.filter((k) => k.product_name.toLowerCase().includes(q))
-        : kandidat;
+      const params = new URL(request.url).searchParams;
+      const q = params.get("q");
+      const outlet = params.get("outlet");
+      let data = kandidat;
+      if (q) {
+        data = data.filter((k) => k.product_name.toLowerCase().includes(q));
+      }
+      if (outlet) {
+        data = data.filter((k) => k.outlet_codes.includes(outlet));
+      }
       return HttpResponse.json({ success: true, data });
     }),
+    http.get("/api/outlets", () =>
+      HttpResponse.json({
+        success: true,
+        data: [
+          { outlet_code: "STTBDG", is_active: true },
+          { outlet_code: "STTSM", is_active: true },
+        ],
+      }),
+    ),
     http.get("/api/product-groups", () =>
       HttpResponse.json({
         success: true,
@@ -104,6 +122,29 @@ describe("ProductMenusView — mapping per menu", () => {
     expect(
       rows.some((el) => within(el.closest("tr")!).queryByText("Terdaftar")),
     ).toBe(true);
+  });
+
+  it("menampilkan outlet tempat menu terjual", async () => {
+    renderWithQuery(<ProductMenusView />);
+
+    const blue = (await screen.findByText("Blue")).closest("tr")!;
+    expect(within(blue).getByText("STTSM, STTBDG")).toBeVisible();
+  });
+
+  it("filter outlet mempersempit daftar kandidat", async () => {
+    renderWithQuery(<ProductMenusView />);
+    await screen.findByText("F birthday cake");
+
+    await userEvent.click(screen.getByRole("combobox", { name: /outlet/i }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "STTBDG" }),
+    );
+
+    // "F birthday cake" hanya terjual di STTSM, jadi hilang dari kandidat.
+    await waitFor(() =>
+      expect(screen.queryByText("F birthday cake")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Blue")).toBeVisible();
   });
 
   it("menambah menu dengan mengirim product_id saja", async () => {

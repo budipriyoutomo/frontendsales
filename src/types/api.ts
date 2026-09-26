@@ -596,6 +596,9 @@ export interface paths {
         /**
          * List Product Menu Candidates
          * @description Menu yang pernah muncul di data penjualan — sumber pilihan mapping menu.
+         *
+         *     Filter `outlet` hanya mempersempit daftar pilihan; mapping yang dibuat
+         *     tetap berlaku untuk semua outlet.
          */
         get: operations["list_product_menu_candidates_api_product_menus_candidates_get"];
         put?: never;
@@ -997,6 +1000,8 @@ export interface components {
             product_name?: string | null;
             /** Product Group */
             product_group?: string | null;
+            /** Outlet Codes */
+            outlet_codes?: string[];
             /** Last Sale Date */
             last_sale_date?: string | null;
         };
@@ -2684,6 +2689,8 @@ export interface operations {
     list_product_menu_candidates_api_product_menus_candidates_get: {
         parameters: {
             query?: {
+                /** @description Batasi ke menu yang pernah terjual di outlet ini */
+                outlet?: string | null;
                 /** @description Batasi ke satu group (tidak peka huruf besar/kecil) */
                 product_group?: string | null;
                 /** @description Cari nama menu atau ProductID */
