@@ -23,3 +23,5 @@ export type UserAdmin = S["UserAdminResponse"];
 export type Pagination = S["PaginationMeta"];
 export type ProductGroupMapping = S["ProductGroupMappingResponse"];
 export type ProductGroupSalesRow = S["ProductGroupSalesRow"];
+export type ProductMenuMapping = S["ProductMenuMappingResponse"];
+export type ProductMenuCandidate = S["ProductMenuCandidate"];

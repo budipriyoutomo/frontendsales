@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ProductGroupsView } from "@/components/admin/product-groups-view";
+import { ProductMenusView } from "@/components/admin/product-menus-view";
 import { RequireRole } from "@/components/auth/require-role";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { PATHNAME_HEADER } from "@/proxy";
@@ -15,7 +16,10 @@ export default async function ProductGroupPage() {
 
   return (
     <RequireRole user={user} izinkan={["admin"]}>
-      <ProductGroupsView />
+      <div className="space-y-10">
+        <ProductGroupsView />
+        <ProductMenusView />
+      </div>
     </RequireRole>
   );
 }

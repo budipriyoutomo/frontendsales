@@ -332,7 +332,8 @@ export interface paths {
          * Publish Sales
          * @description Dipicu mesin POS, bukan dashboard — karena itu tetap pakai API key outlet.
          *
-         *     Group yang dipublish dibaca dari `product_group_mappings` yang aktif.
+         *     Yang dipublish: gabungan group aktif (`product_group_mappings`) dan menu
+         *     aktif (`product_menu_mappings`).
          *     Gagal di tengah tetap seperti sebelumnya: 500, event yang sudah terkirim
          *     tidak ditarik kembali (TODO 3.4).
          */
@@ -561,6 +562,70 @@ export interface paths {
         patch: operations["update_product_group_api_product_groups__mapping_id__patch"];
         trace?: never;
     };
+    "/api/product-menus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Product Menus
+         * @description Semua mapping menu, termasuk yang nonaktif.
+         */
+        get: operations["list_product_menus_api_product_menus_get"];
+        put?: never;
+        /**
+         * Create Product Menu
+         * @description Tambah menu yang ikut dipublish, terlepas dari status group-nya.
+         */
+        post: operations["create_product_menu_api_product_menus_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/product-menus/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Product Menu Candidates
+         * @description Menu yang pernah muncul di data penjualan — sumber pilihan mapping menu.
+         */
+        get: operations["list_product_menu_candidates_api_product_menus_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/product-menus/{mapping_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Product Menu
+         * @description Aktifkan / nonaktifkan menu. Berlaku pada publish berikutnya.
+         */
+        patch: operations["update_product_menu_api_product_menus__mapping_id__patch"];
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -743,6 +808,19 @@ export interface components {
              */
             is_active: boolean;
         };
+        /**
+         * CreateProductMenuMappingRequest
+         * @description Nama & group diambil server dari data penjualan terakhir menu ini.
+         */
+        CreateProductMenuMappingRequest: {
+            /** Product Id */
+            product_id: number;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
         /** CreateUserRequest */
         CreateUserRequest: {
             /**
@@ -910,6 +988,63 @@ export interface components {
             sale_date?: string | null;
             /** Sold */
             sold: number;
+        };
+        /** ProductMenuCandidate */
+        ProductMenuCandidate: {
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
+            /** Product Group */
+            product_group?: string | null;
+            /** Last Sale Date */
+            last_sale_date?: string | null;
+        };
+        /** ProductMenuCandidateListResponse */
+        ProductMenuCandidateListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ProductMenuCandidate"][];
+        };
+        /** ProductMenuMappingDetailResponse */
+        ProductMenuMappingDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ProductMenuMappingResponse"];
+        };
+        /** ProductMenuMappingListResponse */
+        ProductMenuMappingListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ProductMenuMappingResponse"][];
+        };
+        /** ProductMenuMappingResponse */
+        ProductMenuMappingResponse: {
+            /** Id */
+            id: number;
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
+            /** Product Group */
+            product_group?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** PublishResponse */
         PublishResponse: {
@@ -1436,6 +1571,14 @@ export interface components {
          *     nonaktifkan yang lama — jejaknya tetap terlihat.
          */
         UpdateProductGroupMappingRequest: {
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
+         * UpdateProductMenuMappingRequest
+         * @description Hanya status aktif — alasannya sama dengan mapping group.
+         */
+        UpdateProductMenuMappingRequest: {
             /** Is Active */
             is_active: boolean;
         };
@@ -2472,6 +2615,129 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductGroupMappingDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_menus_api_product_menus_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuMappingListResponse"];
+                };
+            };
+        };
+    };
+    create_product_menu_api_product_menus_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductMenuMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuMappingDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_menu_candidates_api_product_menus_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Batasi ke satu group (tidak peka huruf besar/kecil) */
+                product_group?: string | null;
+                /** @description Cari nama menu atau ProductID */
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuCandidateListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_menu_api_product_menus__mapping_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductMenuMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuMappingDetailResponse"];
                 };
             };
             /** @description Validation Error */
