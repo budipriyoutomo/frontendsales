@@ -95,6 +95,9 @@ beforeEach(() => {
         ],
       }),
     ),
+    http.get("/api/product-menus/platecolors", () =>
+      HttpResponse.json({ success: true, data: ["BLUE", "RED"] }),
+    ),
     http.get("/api/sales/product-groups", () =>
       HttpResponse.json({
         success: true,
@@ -222,5 +225,111 @@ describe("ProductMenusView — mapping per menu", () => {
     );
 
     await waitFor(() => expect(patch).toEqual({ is_active: false }));
+  });
+
+  it("menu tanpa warna aktif ditandai tidak dipublish", async () => {
+    renderWithQuery(<ProductMenusView />);
+
+    expect(
+      await screen.findByText("Belum ada — tidak dipublish"),
+    ).toBeVisible();
+  });
+
+  it("menampilkan ringkasan warna aktif saja", async () => {
+    terdaftar[0].colorplates = [
+      { id: 1, platecolor: "RED", multiplier: 2, is_active: true },
+      { id: 2, platecolor: "BLUE", multiplier: 1, is_active: false },
+    ];
+    renderWithQuery(<ProductMenusView />);
+
+    expect(await screen.findByText("RED × 2")).toBeVisible();
+    expect(screen.queryByText(/BLUE × 1/)).not.toBeInTheDocument();
+  });
+
+  it("menambah warna lewat dialog Atur warna", async () => {
+    let body: unknown;
+    server.use(
+      http.post("/api/product-menus/1/colorplates", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          {
+            success: true,
+            data: { id: 5, platecolor: "RED", multiplier: 2, is_active: true },
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    renderWithQuery(<ProductMenusView />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Atur warna" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("combobox", { name: "Warna" }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "RED" }));
+    const pengali = within(dialog).getByLabelText("Pengali");
+    await userEvent.clear(pengali);
+    await userEvent.type(pengali, "2");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Tambah warna" }),
+    );
+
+    await waitFor(() =>
+      expect(body).toEqual({ platecolor: "RED", multiplier: 2 }),
+    );
+    expect(toastSuccess).toHaveBeenCalled();
+  });
+
+  it("warna yang sudah dipakai tidak muncul lagi di pilihan", async () => {
+    terdaftar[0].colorplates = [
+      { id: 1, platecolor: "RED", multiplier: 2, is_active: false },
+    ];
+    renderWithQuery(<ProductMenusView />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Atur warna" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("combobox", { name: "Warna" }),
+    );
+
+    expect(await screen.findByRole("option", { name: "BLUE" })).toBeVisible();
+    expect(
+      screen.queryByRole("option", { name: "RED" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("mengubah pengali lewat PATCH", async () => {
+    let patch: unknown;
+    terdaftar[0].colorplates = [
+      { id: 7, platecolor: "RED", multiplier: 2, is_active: true },
+    ];
+    server.use(
+      http.patch("/api/product-menus/1/colorplates/7", async ({ request }) => {
+        patch = await request.json();
+        return HttpResponse.json({
+          success: true,
+          data: { id: 7, platecolor: "RED", multiplier: 3, is_active: true },
+        });
+      }),
+    );
+    renderWithQuery(<ProductMenusView />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Atur warna" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const input = within(dialog).getByLabelText("Pengali RED");
+    await userEvent.clear(input);
+    await userEvent.type(input, "3");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Simpan" }),
+    );
+
+    await waitFor(() => expect(patch).toEqual({ multiplier: 3 }));
   });
 });

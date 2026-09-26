@@ -25,3 +25,4 @@ export type ProductGroupMapping = S["ProductGroupMappingResponse"];
 export type ProductGroupSalesRow = S["ProductGroupSalesRow"];
 export type ProductMenuMapping = S["ProductMenuMappingResponse"];
 export type ProductMenuCandidate = S["ProductMenuCandidate"];
+export type ProductMenuColorplate = S["ProductMenuColorplateResponse"];

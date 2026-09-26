@@ -137,6 +137,11 @@ export function ProductGroupsView() {
           diterima consumer.
         </p>
         <p className="text-muted-foreground text-sm">
+          Publish hanya mengirim format colorplate: dari daftar ini hanya status
+          group colorplate yang dipakai. Menu dari group lain ikut terhitung
+          lewat konversi warna di Menu satuan.
+        </p>
+        <p className="text-muted-foreground text-sm">
           Group tidak bisa dihapus atau diganti namanya: barisnya disimpan
           sebagai jejak group apa saja yang pernah dipublish. Salah ketik?
           Tambahkan nama yang benar, lalu nonaktifkan yang lama.
@@ -320,7 +325,7 @@ export function ProductGroupsView() {
             </DialogTitle>
             <DialogDescription>
               {konfirmasi?.aktifkan
-                ? "Mulai publish berikutnya, penjualan group ini ikut dikirim ke RabbitMQ. Pastikan consumer sudah siap menerima event-nya — termasuk event tanpa field platecolor."
+                ? "Mulai publish berikutnya, penjualan group ini ikut dikirim ke RabbitMQ — hanya berlaku untuk COLORPLATE; menu group lain dipublish lewat konversi warna di Menu satuan."
                 : "Mulai publish berikutnya, penjualan group ini tidak lagi dikirim ke RabbitMQ, dan consumer berhenti menerima event-nya."}
             </DialogDescription>
           </DialogHeader>

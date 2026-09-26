@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, CircleOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleOff } from "lucide-react";
 import { toast } from "sonner";
+import { MenuColorplateDialog } from "@/components/admin/menu-colorplate-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -60,10 +61,13 @@ function namaMenu(m: { product_name?: string | null; product_id: number }) {
   return m.product_name?.trim() || `ProductID ${m.product_id}`;
 }
 
+/** Satu-satunya group yang dipublish langsung; menu lain lewat konversi warna. */
+const COLORPLATE = "COLORPLATE";
+
 /**
  * Mapping per menu: menu dipilih satu per satu dari group mana pun, lalu
- * dipublish bersama group aktif. Backend menjamin baris yang cocok lewat
- * group dan lewat menu sekaligus tetap terhitung sekali.
+ * dikonversi ke warna colorplate (qty × pengali) saat publish. Menu tanpa
+ * warna aktif tidak dipublish.
  */
 export function ProductMenusView() {
   const qc = useQueryClient();
@@ -72,6 +76,7 @@ export function ProductMenusView() {
   const [cari, setCari] = useState("");
   const [cariTerkirim, setCariTerkirim] = useState("");
   const [konfirmasi, setKonfirmasi] = useState<Konfirmasi | null>(null);
+  const [aturWarnaId, setAturWarnaId] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setCariTerkirim(cari.trim()), JEDA_CARI_MS);
@@ -120,8 +125,9 @@ export function ProductMenusView() {
     onSuccess: (baru, c) => {
       void segarkan();
       toast.success(`${namaMenu(baru ?? c)} ditambahkan.`, {
-        description: "Mulai ikut dipublish pada publish berikutnya.",
+        description: "Tentukan warna colorplate-nya supaya ikut dipublish.",
       });
+      if (baru) setAturWarnaId(baru.id);
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 409) {
@@ -158,11 +164,11 @@ export function ProductMenusView() {
 
   const semua = daftar.data ?? [];
   const idTerdaftar = new Set(semua.map((m) => m.product_id));
-  const groupAktif = new Set(
-    (groupTerdaftar.data ?? [])
-      .filter((g) => g.is_active)
-      .map((g) => normalisasiGroup(g.product_group)),
+  // Hanya COLORPLATE yang dipublish langsung — group lain yang aktif tidak.
+  const colorplateAktif = (groupTerdaftar.data ?? []).some(
+    (g) => g.is_active && normalisasiGroup(g.product_group) === COLORPLATE,
   );
+  const aturWarna = semua.find((m) => m.id === aturWarnaId) ?? null;
   const pilihanGroup = [
     ...new Set((diData.data ?? []).map(normalisasiGroup).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b));
@@ -172,10 +178,10 @@ export function ProductMenusView() {
       <div className="space-y-1">
         <h2 className="text-xl font-semibold tracking-tight">Menu satuan</h2>
         <p className="text-muted-foreground text-sm">
-          Pilih menu satu per satu dari group mana pun — misalnya hanya satu
-          menu dari group PROMO — tanpa mengaktifkan seluruh group-nya. Menu
-          dipublish bersama group aktif; menu yang group-nya sudah aktif tidak
-          dikirim dua kali.
+          Pilih menu dari group mana pun, lalu tentukan warna colorplate
+          tujuannya dan pengalinya. Contoh: menu PROMO &ldquo;Buy 1 Get 2
+          RED&rdquo; → RED × 2. Saat publish, jumlahnya ditambahkan ke warna
+          itu. Menu tanpa warna aktif tidak dipublish.
         </p>
         <p className="text-muted-foreground text-sm">
           Filter outlet hanya untuk mencari menu — ProductID bisa berbeda antar
@@ -261,7 +267,7 @@ export function ProductMenusView() {
                   {kandidat.data.map((c) => {
                     const terdaftar = idTerdaftar.has(c.product_id);
                     const lewatGroup =
-                      !!c.product_group && groupAktif.has(c.product_group);
+                      colorplateAktif && c.product_group === COLORPLATE;
                     return (
                       <TableRow
                         key={`${c.product_id}-${c.product_group}-${c.product_name}`}
@@ -325,7 +331,7 @@ export function ProductMenusView() {
           ) : semua.length === 0 ? (
             <KeadaanKosong
               judul="Belum ada menu terdaftar"
-              keterangan="Hanya group aktif yang dipublish sampai menu pertama ditambahkan di atas."
+              keterangan="Hanya COLORPLATE yang dipublish sampai menu pertama ditambahkan di atas dan diberi warna."
             />
           ) : (
             <div className="overflow-x-auto">
@@ -335,6 +341,7 @@ export function ProductMenusView() {
                     <TableHead>Menu terdaftar</TableHead>
                     <TableHead>Group</TableHead>
                     <TableHead>ProductID</TableHead>
+                    <TableHead>Warna</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
@@ -352,6 +359,9 @@ export function ProductMenusView() {
                         {m.product_id}
                       </TableCell>
                       <TableCell>
+                        <WarnaMenu menu={m} />
+                      </TableCell>
+                      <TableCell>
                         {m.is_active ? (
                           <span className="inline-flex items-center gap-1.5">
                             <CheckCircle2
@@ -367,7 +377,14 @@ export function ProductMenusView() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="space-x-2 text-right whitespace-nowrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAturWarnaId(m.id)}
+                        >
+                          Atur warna
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -404,8 +421,8 @@ export function ProductMenusView() {
             </DialogTitle>
             <DialogDescription>
               {konfirmasi?.aktifkan
-                ? "Mulai publish berikutnya, penjualan menu ini ikut dikirim ke RabbitMQ."
-                : "Mulai publish berikutnya, menu ini tidak lagi dikirim — kecuali group-nya sedang aktif."}
+                ? "Mulai publish berikutnya, penjualan menu ini ditambahkan ke warna tujuannya."
+                : "Mulai publish berikutnya, penjualan menu ini tidak lagi ditambahkan ke warna mana pun."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -432,6 +449,31 @@ export function ProductMenusView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MenuColorplateDialog
+        key={aturWarnaId ?? "tutup"}
+        menu={aturWarna}
+        namaMenu={aturWarna ? namaMenu(aturWarna) : ""}
+        onClose={() => setAturWarnaId(null)}
+      />
     </div>
+  );
+}
+
+/** Ringkasan konversi di tabel: "RED × 2, BLUE × 1", atau peringatan kalau kosong. */
+function WarnaMenu({ menu }: { menu: ProductMenuMapping }) {
+  const aktif = (menu.colorplates ?? []).filter((c) => c.is_active);
+  if (aktif.length === 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-500">
+        <AlertTriangle aria-hidden className="size-4" />
+        Belum ada — tidak dipublish
+      </span>
+    );
+  }
+  return (
+    <span className="font-mono text-sm">
+      {aktif.map((c) => `${c.platecolor} × ${c.multiplier}`).join(", ")}
+    </span>
   );
 }

@@ -332,8 +332,9 @@ export interface paths {
          * Publish Sales
          * @description Dipicu mesin POS, bukan dashboard — karena itu tetap pakai API key outlet.
          *
-         *     Yang dipublish: gabungan group aktif (`product_group_mappings`) dan menu
-         *     aktif (`product_menu_mappings`).
+         *     Yang dipublish: rekap per warna colorplate — qty COLORPLATE langsung
+         *     ditambah menu yang dikonversi lewat `product_menu_colorplates`
+         *     (lihat `colorplate_publish_service`).
          *     Gagal di tengah tetap seperti sebelumnya: 500, event yang sudah terkirim
          *     tidak ditarik kembali (TODO 3.4).
          */
@@ -609,6 +610,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/product-menus/platecolors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Platecolors
+         * @description Warna COLORPLATE yang ada di data penjualan — pilihan tujuan konversi menu.
+         */
+        get: operations["list_platecolors_api_product_menus_platecolors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/product-menus/{mapping_id}": {
         parameters: {
             query?: never;
@@ -627,6 +648,46 @@ export interface paths {
          * @description Aktifkan / nonaktifkan menu. Berlaku pada publish berikutnya.
          */
         patch: operations["update_product_menu_api_product_menus__mapping_id__patch"];
+        trace?: never;
+    };
+    "/api/product-menus/{mapping_id}/colorplates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Product Menu Colorplate
+         * @description Hitung menu ini sebagai `multiplier` × warna colorplate saat publish.
+         */
+        post: operations["create_product_menu_colorplate_api_product_menus__mapping_id__colorplates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/product-menus/{mapping_id}/colorplates/{colorplate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Product Menu Colorplate
+         * @description Ubah multiplier / aktifkan / nonaktifkan konversi. Berlaku pada publish berikutnya.
+         */
+        patch: operations["update_product_menu_colorplate_api_product_menus__mapping_id__colorplates__colorplate_id__patch"];
         trace?: never;
     };
     "/": {
@@ -812,6 +873,24 @@ export interface components {
             is_active: boolean;
         };
         /**
+         * CreateProductMenuColorplateRequest
+         * @description `platecolor` harus nama menu COLORPLATE yang ada di data penjualan.
+         */
+        CreateProductMenuColorplateRequest: {
+            /** Platecolor */
+            platecolor: string;
+            /**
+             * Multiplier
+             * @default 1
+             */
+            multiplier: number;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
          * CreateProductMenuMappingRequest
          * @description Nama & group diambil server dari data penjualan terakhir menu ini.
          */
@@ -924,6 +1003,16 @@ export interface components {
             /** Has More */
             has_more: boolean;
         };
+        /** PlatecolorListResponse */
+        PlatecolorListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: string[];
+        };
         /** ProductGroupListResponse */
         ProductGroupListResponse: {
             /**
@@ -1015,6 +1104,30 @@ export interface components {
             /** Data */
             data: components["schemas"]["ProductMenuCandidate"][];
         };
+        /** ProductMenuColorplateDetailResponse */
+        ProductMenuColorplateDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ProductMenuColorplateResponse"];
+        };
+        /** ProductMenuColorplateResponse */
+        ProductMenuColorplateResponse: {
+            /** Id */
+            id: number;
+            /** Platecolor */
+            platecolor: string;
+            /** Multiplier */
+            multiplier: number;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /** ProductMenuMappingDetailResponse */
         ProductMenuMappingDetailResponse: {
             /**
@@ -1046,6 +1159,8 @@ export interface components {
             product_group?: string | null;
             /** Is Active */
             is_active: boolean;
+            /** Colorplates */
+            colorplates?: components["schemas"]["ProductMenuColorplateResponse"][];
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -1578,6 +1693,16 @@ export interface components {
         UpdateProductGroupMappingRequest: {
             /** Is Active */
             is_active: boolean;
+        };
+        /**
+         * UpdateProductMenuColorplateRequest
+         * @description Warna tidak bisa diganti — nonaktifkan lalu tambah warna baru.
+         */
+        UpdateProductMenuColorplateRequest: {
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /**
          * UpdateProductMenuMappingRequest
@@ -2723,6 +2848,26 @@ export interface operations {
             };
         };
     };
+    list_platecolors_api_product_menus_platecolors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatecolorListResponse"];
+                };
+            };
+        };
+    };
     update_product_menu_api_product_menus__mapping_id__patch: {
         parameters: {
             query?: never;
@@ -2745,6 +2890,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductMenuMappingDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_product_menu_colorplate_api_product_menus__mapping_id__colorplates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductMenuColorplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuColorplateDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_menu_colorplate_api_product_menus__mapping_id__colorplates__colorplate_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mapping_id: number;
+                colorplate_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductMenuColorplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuColorplateDetailResponse"];
                 };
             };
             /** @description Validation Error */
