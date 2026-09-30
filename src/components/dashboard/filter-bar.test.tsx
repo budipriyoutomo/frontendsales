@@ -25,13 +25,32 @@ beforeEach(() => {
       HttpResponse.json({
         success: true,
         data: [
-          { outlet_code: "OUT1", is_active: true },
-          { outlet_code: "OUT2", is_active: true },
+          { outlet_code: "OUT1", is_active: true, brand_code: "MHR" },
+          { outlet_code: "OUT2", is_active: true, brand_code: "LAIN" },
+          { outlet_code: "OUT3", is_active: true, brand_code: null },
+        ],
+      }),
+    ),
+    http.get("/api/brands", () =>
+      HttpResponse.json({
+        success: true,
+        data: [
+          brand(1, "LAIN", "Brand Lain", ["OUT2"]),
+          brand(2, "MHR", "Maharasa", ["OUT1"]),
         ],
       }),
     ),
   );
 });
+
+function brand(id: number, code: string, name: string, outlet_codes: string[]) {
+  return { id, code, name, is_active: true, outlet_codes };
+}
+
+function paramsTerakhir() {
+  const url = replace.mock.calls.at(-1)![0] as string;
+  return new URLSearchParams(url.split("?")[1]);
+}
 
 describe("FilterBar — rentang tanggal (4.1, 4.8, 4.10)", () => {
   it("menulis rentang baru ke URL supaya bisa dibagikan", async () => {
@@ -147,5 +166,96 @@ describe("FilterBar — pemilih outlet per role (3.8)", () => {
     await screen.findByLabelText(/dari tanggal/i);
 
     expect(diminta).toBe(0);
+  });
+});
+
+describe("FilterBar — brand", () => {
+  it("memilih brand menulis `brand` ke URL", async () => {
+    renderWithQuery(<FilterBar role="admin" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("combobox", { name: /brand/i }));
+    await user.click(
+      await screen.findByRole("option", { name: "Maharasa (MHR)" }),
+    );
+
+    expect(paramsTerakhir().get("brand")).toBe("MHR");
+  });
+
+  it("pilihan outlet dipersempit ke outlet brand terpilih", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&brand=MHR",
+    );
+    renderWithQuery(<FilterBar role="admin" />);
+    const user = userEvent.setup();
+
+    // Tunggu daftar outlet termuat sebelum membuka dropdown.
+    await screen.findByRole("combobox", { name: /brand/i });
+    await user.click(screen.getByRole("combobox", { name: /outlet/i }));
+
+    expect(await screen.findByRole("option", { name: "OUT1" })).toBeVisible();
+    expect(screen.queryByRole("option", { name: "OUT2" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "OUT3" })).toBeNull();
+  });
+
+  it("mengganti brand melepas outlet yang bukan milik brand itu", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&outlet=OUT1",
+    );
+    renderWithQuery(<FilterBar role="admin" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("combobox", { name: /brand/i }));
+    await user.click(
+      await screen.findByRole("option", { name: "Brand Lain (LAIN)" }),
+    );
+
+    const params = paramsTerakhir();
+    expect(params.get("brand")).toBe("LAIN");
+    expect(params.has("outlet")).toBe(false);
+  });
+
+  it("outlet yang masih milik brand terpilih dipertahankan", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&outlet=OUT1",
+    );
+    renderWithQuery(<FilterBar role="admin" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("combobox", { name: /brand/i }));
+    await user.click(
+      await screen.findByRole("option", { name: "Maharasa (MHR)" }),
+    );
+
+    expect(paramsTerakhir().get("outlet")).toBe("OUT1");
+  });
+
+  it("tidak ditampilkan dan tidak diminta untuk role outlet", async () => {
+    let diminta = 0;
+    server.use(
+      http.get("/api/brands", () => {
+        diminta += 1;
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    renderWithQuery(<FilterBar role="outlet" />);
+    await screen.findByLabelText(/dari tanggal/i);
+
+    expect(screen.queryByLabelText(/brand/i)).not.toBeInTheDocument();
+    expect(diminta).toBe(0);
+  });
+
+  it("disembunyikan selama belum ada brand terdaftar", async () => {
+    server.use(
+      http.get("/api/brands", () =>
+        HttpResponse.json({ success: true, data: [] }),
+      ),
+    );
+
+    renderWithQuery(<FilterBar role="admin" />);
+    await screen.findByRole("combobox", { name: /outlet/i });
+
+    expect(screen.queryByRole("combobox", { name: /brand/i })).toBeNull();
   });
 });

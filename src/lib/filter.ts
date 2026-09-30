@@ -14,6 +14,11 @@ export type Filter = {
   end_date: string;
   /** Tidak ada berarti semua outlet. */
   outlet?: string;
+  /**
+   * Kode brand — hanya outlet milik brand ini. Digabung AND dengan `outlet`
+   * di backend, jadi outlet di luar brand menghasilkan data kosong.
+   */
+  brand?: string;
 };
 
 const POLA_TANGGAL = /^\d{4}-\d{2}-\d{2}$/;
@@ -72,8 +77,14 @@ export function bacaFilter(
   if (start_date > end_date) [start_date, end_date] = [end_date, start_date];
 
   const outlet = params.get("outlet")?.trim();
+  const brand = params.get("brand")?.trim();
 
-  return { start_date, end_date, outlet: outlet ? outlet : undefined };
+  return {
+    start_date,
+    end_date,
+    outlet: outlet ? outlet : undefined,
+    brand: brand ? brand : undefined,
+  };
 }
 
 /**
@@ -95,6 +106,8 @@ export function filterKeSearchParams(
   params.set("end_date", filter.end_date);
   if (filter.outlet) params.set("outlet", filter.outlet);
   else params.delete("outlet");
+  if (filter.brand) params.set("brand", filter.brand);
+  else params.delete("brand");
   params.delete("offset");
   return params;
 }
@@ -106,5 +119,6 @@ export function filterKeQuery(filter: Filter): Record<string, string> {
     end_date: filter.end_date,
   };
   if (filter.outlet) query.outlet = filter.outlet;
+  if (filter.brand) query.brand = filter.brand;
   return query;
 }

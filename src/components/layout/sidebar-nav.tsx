@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ReceiptText,
   RefreshCw,
+  Store,
   Users,
 } from "lucide-react";
 import type { NavItem } from "@/lib/auth/access";
@@ -19,6 +20,7 @@ const IKON = {
   sync: RefreshCw,
   kunci: KeyRound,
   group: Layers,
+  brand: Store,
   pengguna: Users,
 } as const;
 

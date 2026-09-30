@@ -12,7 +12,14 @@ export type NavItem = {
   href: string;
   label: string;
   /** Ikon lucide, dipilih di komponen sidebar. */
-  icon: "dashboard" | "transaksi" | "sync" | "kunci" | "group" | "pengguna";
+  icon:
+    | "dashboard"
+    | "transaksi"
+    | "sync"
+    | "kunci"
+    | "group"
+    | "brand"
+    | "pengguna";
   roles: readonly Role[];
 };
 
@@ -49,6 +56,13 @@ export const NAV: readonly NavItem[] = [
     href: "/product-group",
     label: "Product Group",
     icon: "group",
+    roles: ["admin"],
+  },
+  {
+    // Mengubah irisan laporan semua orang — manager cukup memakai filternya.
+    href: "/brand",
+    label: "Brand",
+    icon: "brand",
     roles: ["admin"],
   },
   {

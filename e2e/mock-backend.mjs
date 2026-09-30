@@ -283,7 +283,9 @@ const server = createServer(async (req, res) => {
     return tolak(res, 403, "Akses ditolak");
   }
   if (
-    (path === "/api/sales/by-outlet" || path === "/api/outlets") &&
+    (path === "/api/sales/by-outlet" ||
+      path === "/api/outlets" ||
+      path === "/api/brands") &&
     user.role === "outlet"
   ) {
     return tolak(res, 403, "Akses ditolak");
@@ -455,6 +457,11 @@ const server = createServer(async (req, res) => {
         { outlet_code: "OUTLET_002", is_active: true },
       ]),
     );
+  }
+
+  // Belum ada brand — pemilih brand di filter tetap tersembunyi.
+  if (path === "/api/brands" && method === "GET") {
+    return json(res, 200, bungkus([]));
   }
 
   if (path === "/api/outlets/sync-status") {

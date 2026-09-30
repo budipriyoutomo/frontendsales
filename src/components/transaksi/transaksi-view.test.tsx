@@ -63,6 +63,9 @@ beforeEach(() => {
     http.get("/api/outlets", () =>
       HttpResponse.json({ success: true, data: [] }),
     ),
+    http.get("/api/brands", () =>
+      HttpResponse.json({ success: true, data: [] }),
+    ),
   );
 });
 

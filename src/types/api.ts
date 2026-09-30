@@ -357,7 +357,8 @@ export interface paths {
          * @description Daftar outlet untuk dropdown filter.
          *
          *     Sumbernya tabel `api_keys`: satu outlet = satu key. Hanya role yang berhak
-         *     melihat lintas outlet yang boleh memanggilnya.
+         *     melihat lintas outlet yang boleh memanggilnya. Brand ikut dikirim supaya
+         *     dropdown outlet bisa dikelompokkan / disaring per brand.
          */
         get: operations["list_outlets_api_outlets_get"];
         put?: never;
@@ -690,6 +691,87 @@ export interface paths {
         patch: operations["update_product_menu_colorplate_api_product_menus__mapping_id__colorplates__colorplate_id__patch"];
         trace?: never;
     };
+    "/api/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Brands
+         * @description Semua brand, termasuk yang nonaktif, beserta outlet-nya.
+         */
+        get: operations["list_brands_api_brands_get"];
+        put?: never;
+        /** Create Brand */
+        post: operations["create_brand_api_brands_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brands/outlets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Outlet Brands
+         * @description Semua outlet (dari API key) beserta brand-nya — termasuk yang belum dipetakan.
+         */
+        get: operations["list_outlet_brands_api_brands_outlets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brands/outlets/{outlet_code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Outlet Brand
+         * @description Petakan outlet ke brand. Outlet yang sudah punya brand dipindahkan.
+         */
+        put: operations["set_outlet_brand_api_brands_outlets__outlet_code__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brands/{brand_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Brand
+         * @description Ubah nama / aktifkan / nonaktifkan brand. Mapping outlet-nya tidak ikut berubah.
+         */
+        patch: operations["update_brand_api_brands__brand_id__patch"];
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -826,6 +908,42 @@ export interface components {
             /** Updated At */
             updated_at?: string | null;
         };
+        /** BrandDetailResponse */
+        BrandDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["BrandResponse"];
+        };
+        /** BrandListResponse */
+        BrandListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["BrandResponse"][];
+        };
+        /** BrandResponse */
+        BrandResponse: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Outlet Codes */
+            outlet_codes?: string[];
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
             /** Current Password */
@@ -858,6 +976,21 @@ export interface components {
         CreateApiKeyRequest: {
             /** Outlet Code */
             outlet_code: string;
+        };
+        /**
+         * CreateBrandRequest
+         * @description Kode dinormalisasi oleh service: `mhr ` tersimpan sebagai `MHR`.
+         */
+        CreateBrandRequest: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
         };
         /**
          * CreateProductGroupMappingRequest
@@ -956,6 +1089,38 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** OutletBrandDetailResponse */
+        OutletBrandDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["OutletBrandResponse"];
+        };
+        /** OutletBrandListResponse */
+        OutletBrandListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["OutletBrandResponse"][];
+        };
+        /** OutletBrandResponse */
+        OutletBrandResponse: {
+            /** Outlet Code */
+            outlet_code: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Brand Id */
+            brand_id?: number | null;
+            /** Brand Code */
+            brand_code?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+        };
         /** OutletListResponse */
         OutletListResponse: {
             /**
@@ -972,6 +1137,10 @@ export interface components {
             outlet_code: string;
             /** Is Active */
             is_active: boolean;
+            /** Brand Code */
+            brand_code?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
         };
         /** OutletSalesListResponse */
         OutletSalesListResponse: {
@@ -1571,6 +1740,17 @@ export interface components {
             /** Items */
             items?: components["schemas"]["SalesItemSchema"][];
         };
+        /**
+         * SetOutletBrandRequest
+         * @description `brand_id: null` melepas outlet dari brand-nya.
+         *
+         *     Field wajib dikirim (boleh null) supaya body kosong tidak diam-diam
+         *     melepas outlet.
+         */
+        SetOutletBrandRequest: {
+            /** Brand Id */
+            brand_id: number | null;
+        };
         /** SetPasswordRequest */
         SetPasswordRequest: {
             /** Password */
@@ -1681,6 +1861,16 @@ export interface components {
             total_qty: number;
             /** Total Amount */
             total_amount: number;
+        };
+        /**
+         * UpdateBrandRequest
+         * @description Kode sengaja tidak bisa diubah — dipakai sebagai filter `?brand=` di laporan.
+         */
+        UpdateBrandRequest: {
+            /** Name */
+            name?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /**
          * UpdateProductGroupMappingRequest
@@ -1997,6 +2187,8 @@ export interface operations {
                 end_date?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2071,6 +2263,8 @@ export interface operations {
                 start_date?: string | null;
                 /** @description Tanggal akhir (inklusif) */
                 end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2136,6 +2330,8 @@ export interface operations {
                 outlet?: string | null;
                 start_date?: string | null;
                 end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2169,6 +2365,8 @@ export interface operations {
                 outlet?: string | null;
                 start_date?: string | null;
                 end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2201,6 +2399,8 @@ export interface operations {
             query?: {
                 start_date?: string | null;
                 end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2236,6 +2436,8 @@ export interface operations {
                 end_date?: string | null;
                 product_group?: string | null;
                 limit?: number;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2269,6 +2471,8 @@ export interface operations {
                 outlet?: string | null;
                 start_date?: string | null;
                 end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
             };
             header?: never;
             path?: never;
@@ -2961,6 +3165,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductMenuColorplateDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_brands_api_brands_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandListResponse"];
+                };
+            };
+        };
+    };
+    create_brand_api_brands_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBrandRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_outlet_brands_api_brands_outlets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutletBrandListResponse"];
+                };
+            };
+        };
+    };
+    set_outlet_brand_api_brands_outlets__outlet_code__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                outlet_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetOutletBrandRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutletBrandDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_brand_api_brands__brand_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBrandRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetailResponse"];
                 };
             };
             /** @description Validation Error */

@@ -26,3 +26,5 @@ export type ProductGroupSalesRow = S["ProductGroupSalesRow"];
 export type ProductMenuMapping = S["ProductMenuMappingResponse"];
 export type ProductMenuCandidate = S["ProductMenuCandidate"];
 export type ProductMenuColorplate = S["ProductMenuColorplateResponse"];
+export type Brand = S["BrandResponse"];
+export type OutletBrand = S["OutletBrandResponse"];

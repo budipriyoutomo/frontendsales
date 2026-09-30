@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useOutlets } from "@/hooks/use-sales";
+import { useBrands, useOutlets } from "@/hooks/use-sales";
 import { bacaFilter, filterKeSearchParams, rentangDefault } from "@/lib/filter";
 import type { Filter } from "@/lib/filter";
 import { bolehLihatPemilihOutlet } from "@/lib/auth/access";
@@ -20,6 +20,7 @@ import type { Role } from "@/lib/auth/current-user";
 
 /** Nilai sentinel — `Select` tidak menerima item bernilai string kosong. */
 const SEMUA_OUTLET = "__semua__";
+const SEMUA_BRAND = "__semua__";
 
 const PRESET: { label: string; hari: number }[] = [
   { label: "7 hari", hari: 7 },
@@ -46,6 +47,13 @@ export function FilterBar({ role }: { role: Role }) {
 
   const tampilkanOutlet = bolehLihatPemilihOutlet(role);
   const outlets = useOutlets(tampilkanOutlet);
+  const brands = useBrands(tampilkanOutlet);
+
+  // Dengan brand terpilih, pilihan outlet dipersempit ke outlet brand itu —
+  // outlet lain hanya akan menghasilkan laporan kosong.
+  const pilihanOutlet = (outlets.data ?? []).filter(
+    (o) => !filter.brand || o.brand_code === filter.brand,
+  );
 
   function terapkan(berikutnya: Filter) {
     // URL yang berlaku ikut dibawa, supaya group terpilih (10.12) tidak
@@ -55,6 +63,20 @@ export function FilterBar({ role }: { role: Role }) {
       new URLSearchParams(searchParams.toString()),
     );
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function gantiBrand(brand: string | undefined) {
+    const outletMasihCocok =
+      !brand ||
+      !filter.outlet ||
+      (outlets.data ?? []).some(
+        (o) => o.outlet_code === filter.outlet && o.brand_code === brand,
+      );
+    terapkan({
+      ...filter,
+      brand,
+      outlet: outletMasihCocok ? filter.outlet : undefined,
+    });
   }
 
   function pakaiPreset(hari: number) {
@@ -98,6 +120,35 @@ export function FilterBar({ role }: { role: Role }) {
         />
       </div>
 
+      {tampilkanOutlet && (brands.data?.length || filter.brand) ? (
+        // Disembunyikan sampai ada brand terdaftar — pemilih tanpa pilihan
+        // hanya memakan tempat. Tetap tampil kalau URL sudah membawa brand,
+        // supaya filter yang sedang berlaku selalu terlihat.
+        <div className="space-y-1.5">
+          <Label htmlFor="brand">Brand</Label>
+          <Select
+            value={filter.brand ?? SEMUA_BRAND}
+            onValueChange={(v) => gantiBrand(v === SEMUA_BRAND ? undefined : v)}
+          >
+            <SelectTrigger id="brand" className="w-48">
+              <SelectValue placeholder="Semua brand" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={SEMUA_BRAND}>Semua brand</SelectItem>
+              {(brands.data ?? []).map((b) => (
+                <SelectItem key={b.code} value={b.code}>
+                  {b.name} ({b.code}){b.is_active ? "" : " — nonaktif"}
+                </SelectItem>
+              ))}
+              {filter.brand &&
+              !(brands.data ?? []).some((b) => b.code === filter.brand) ? (
+                <SelectItem value={filter.brand}>{filter.brand}</SelectItem>
+              ) : null}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
       {tampilkanOutlet ? (
         <div className="space-y-1.5">
           <Label htmlFor="outlet">Outlet</Label>
@@ -115,7 +166,7 @@ export function FilterBar({ role }: { role: Role }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={SEMUA_OUTLET}>Semua outlet</SelectItem>
-              {(outlets.data ?? []).map((o) => (
+              {pilihanOutlet.map((o) => (
                 <SelectItem key={o.outlet_code} value={o.outlet_code}>
                   {o.outlet_code}
                 </SelectItem>

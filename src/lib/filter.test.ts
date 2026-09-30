@@ -139,3 +139,43 @@ describe("filterKeQuery", () => {
     });
   });
 });
+
+describe("filter brand", () => {
+  it("dibaca dari URL, kosong berarti semua brand", () => {
+    expect(bacaFilter(new URLSearchParams("brand=MHR"), HARI_INI).brand).toBe(
+      "MHR",
+    );
+    expect(
+      bacaFilter(new URLSearchParams("brand=%20"), HARI_INI).brand,
+    ).toBeUndefined();
+  });
+
+  it("ditulis ke URL dan dihapus saat semua brand dipilih", () => {
+    const dasar = new URLSearchParams("brand=LAMA&outlet=OUT1");
+    const dengan = filterKeSearchParams(
+      { start_date: "2026-01-01", end_date: "2026-01-31", brand: "MHR" },
+      dasar,
+    );
+    expect(dengan.get("brand")).toBe("MHR");
+
+    const tanpa = filterKeSearchParams(
+      { start_date: "2026-01-01", end_date: "2026-01-31" },
+      dasar,
+    );
+    expect(tanpa.has("brand")).toBe(false);
+  });
+
+  it("ikut dikirim ke API sebagai `brand`", () => {
+    expect(
+      filterKeQuery({
+        start_date: "2026-01-01",
+        end_date: "2026-01-31",
+        brand: "MHR",
+      }),
+    ).toEqual({
+      start_date: "2026-01-01",
+      end_date: "2026-01-31",
+      brand: "MHR",
+    });
+  });
+});

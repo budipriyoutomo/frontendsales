@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/browser";
 import { filterKeQuery, type Filter } from "@/lib/filter";
 import type {
+  Brand,
   DailyRow,
   Outlet,
   OutletSalesRow,
@@ -50,10 +51,12 @@ export function useSalesByOutlet(filter: Filter, aktif: boolean) {
     enabled: aktif,
     queryFn: () =>
       api.request<OutletSalesRow[]>("/api/sales/by-outlet", {
-        // Endpoint ini tidak menerima `outlet` — memang lintas outlet.
+        // Endpoint ini tidak menerima `outlet` — memang lintas outlet —
+        // tapi bisa dipersempit ke outlet satu brand.
         query: {
           start_date: filter.start_date,
           end_date: filter.end_date,
+          brand: filter.brand,
         },
       }),
   });
@@ -105,6 +108,16 @@ export function useOutlets(aktif: boolean) {
     // Daftar outlet nyaris tidak pernah berubah dalam satu sesi.
     staleTime: 10 * 60_000,
     queryFn: () => api.request<Outlet[]>("/api/outlets"),
+  });
+}
+
+/** Brand untuk filter — admin & manager saja; role outlet mendapat 403. */
+export function useBrands(aktif: boolean) {
+  return useQuery({
+    queryKey: ["brands"],
+    enabled: aktif,
+    staleTime: 10 * 60_000,
+    queryFn: () => api.request<Brand[]>("/api/brands"),
   });
 }
 
