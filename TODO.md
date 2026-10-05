@@ -556,6 +556,55 @@ Fakta dari backend:
 
 ---
 
+## Fase 11 — Closing Report (RabbitMQ) ✅ SELESAI
+
+Pasangan backend sync-api TODO Fase 7.6. Dikerjakan 2026-10-05 dengan TDD.
+Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
+
+- [x] **11.1 Tipe** — `src/types/api.ts` digenerate ulang dari OpenAPI backend
+      (hanya penambahan skema closing); alias di `src/types/domain.ts`.
+- [x] **11.2 `/closing`** (semua role) — `ClosingView`: - Tab _Perbandingan POS_ (default): ringkasan per status sekaligus tombol
+      saring (`Perlu dicek` = semua selain cocok), switch _Ikutkan
+      transaksi void_ → `include_deleted`, admin diberi tautan ke mapping
+      kalau ada menu belum dipetakan. - Tab _Daftar laporan_: paginasi + dialog detail (item revisi aktif dan
+      riwayat kiriman). Tab disimpan di URL (`?tab=laporan`). - `FilterBar tanpaBrand` — endpoint closing tidak menerima `brand`.
+- [x] **11.3 `/closing-menu`** (admin) — `ClosingMenusView` +
+      `ClosingMenuMappingDialog`: default menampilkan menu _belum dipetakan_,
+      tambah ProductID × pengali (cari lewat `/api/product-menus/candidates`),
+      ubah pengali, aktifkan/nonaktifkan. Dialog membaca menu dari daftar
+      "semua" supaya tidak tertutup saat menu keluar dari saringan.
+- [x] **11.4 `formatTanggalWaktuUtc`** — `sent_at` dll. dari backend adalah UTC
+      tanpa zona; `new Date()` membacanya sebagai waktu lokal (bergeser 7 jam).
+- [x] **11.5 Test** — `closing.test.ts`, `closing-view.test.tsx`,
+      `closing-menus-view.test.tsx`, tambahan di `filter-bar`, `format`,
+      `access`, dan dua pemeriksaan axe di `a11y.test.tsx`.
+- [x] **11.6 E2E** — `e2e/closing.spec.ts` (4 skenario: mapping → perbandingan
+      cocok, detail laporan, scope role outlet, manager ditolak di
+      `/closing-menu`). `e2e/mock-backend.mjs` punya `/api/closing-*` dan
+      `/api/product-menus/candidates`. `peran.spec.ts` diperbarui: role outlet
+      kini melihat 4 menu (Closing). Seluruh E2E 37/37 lulus (2026-10-05).
+- [x] **11.7 Waktu UTC di halaman lain** — dicek di backend: `created_at`,
+      `updated_at`, `last_synced_at` semuanya `utcnow()` tanpa zona. Diganti ke
+      `formatTanggalWaktuUtc` di API key, product group, pengguna, status sync.
+      **Bug ikut tertangkap:** `nilaiKesegaran` membaca `last_synced_at` sebagai
+      waktu lokal → di WIB outlet yang sync 1 jam lalu dihitung 8 jam lalu dan
+      ditandai "Perlu dicek". Sekarang lewat `bacaWaktuUtc`. `paid_time` di
+      detail transaksi TIDAK diubah — itu jam lokal mesin POS.
+      Vitest kini berjalan dengan `TZ=Asia/Jakarta` (di UTC bug ini tak terlihat).
+
+- [x] **11.8 Penyesuaian jawaban pengirim (2026-10-05)** — perbandingan kini
+      **per produk POS**: tabel menampilkan produk, daftar menu closing yang
+      dipetakan ke produk itu (terjual · adj · komp · pengali), closing =
+      Σ (terjual + adj + komp) × pengali, POS, selisih = POS − closing.
+      Menu tanpa kode tampil "tanpa kode" + brand; penjelasan pengali = unit
+      produk POS per porsi. Tipe digenerate ulang; unit 307 dan E2E lulus.
+- [ ] **11.9 Test flaky lama** — `alur-utama.spec.ts` › "401 di tengah sesi…"
+      sesekali gagal karena `getByText("OUTLET_001")` juga menangkap span
+      pengukur recharts (`#recharts_measurement_span`). 3× ulang lulus semua;
+      bukan dari Fase 11. Perbaikannya: persempit locator ke tabel/kartu.
+
+---
+
 ## Lampiran — Kontrak API terverifikasi
 
 Base URL: `http://localhost:8000` · Auth: `Authorization: Bearer <access_token>`

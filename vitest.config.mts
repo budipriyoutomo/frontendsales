@@ -2,6 +2,13 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
+/**
+ * Test berjalan di zona waktu pengguna sebenarnya (WIB). Di zona UTC (runner
+ * CI), bug "UTC tanpa offset dibaca sebagai waktu lokal" tidak pernah
+ * kelihatan karena selisihnya nol. Diset di sini supaya worker mewarisinya.
+ */
+process.env.TZ = "Asia/Jakarta";
+
 export default defineConfig({
   plugins: [react()],
   test: {

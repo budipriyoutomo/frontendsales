@@ -59,6 +59,18 @@ describe("nilaiKesegaran (7.2)", () => {
     );
   });
 
+  it("waktu dari backend (UTC tanpa zona) dibaca sebagai UTC, bukan waktu lokal", () => {
+    // Backend mengirim `updated_at` hasil utcnow() tanpa offset. Dibaca sebagai
+    // waktu lokal WIB, sync 1 jam lalu terhitung 8 jam lalu → "waspada".
+    const sekarang = new Date(Date.UTC(2026, 9, 5, 2, 0));
+    expect(nilaiKesegaran(baris("2026-10-05T01:00:00"), sekarang)).toBe(
+      "segar",
+    );
+    expect(nilaiKesegaran(baris("2026-10-04T19:00:00"), sekarang)).toBe(
+      "waspada",
+    );
+  });
+
   it("tidak menganggap waktu sync di masa depan sebagai basi", () => {
     // Jam POS yang meleset ke depan tidak boleh memunculkan alarm palsu.
     const depan = new Date(SEKARANG.getTime() + 3600_000).toISOString();

@@ -25,7 +25,7 @@ import { KeyBaruDialog } from "@/components/admin/key-baru-dialog";
 import { KonfirmasiKetikDialog } from "@/components/admin/konfirmasi-ketik-dialog";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
-import { formatTanggalWaktu } from "@/lib/format";
+import { formatTanggalWaktuUtc } from "@/lib/format";
 import type { ApiKey } from "@/types/domain";
 
 type KeyBaru = { outletCode: string; apiKey: string };
@@ -194,7 +194,9 @@ export function ApiKeysView() {
                           {k.is_active ? "Aktif" : "Dicabut"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatTanggalWaktu(k.created_at)}</TableCell>
+                      <TableCell>
+                        {formatTanggalWaktuUtc(k.created_at)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

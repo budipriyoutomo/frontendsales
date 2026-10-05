@@ -5,6 +5,8 @@ import {
   formatRupiah,
   formatTanggal,
   formatTanggalWaktu,
+  formatTanggalWaktuUtc,
+  bacaWaktuUtc,
 } from "@/lib/format";
 
 describe("formatRupiah (0.4, 4.9)", () => {
@@ -67,6 +69,44 @@ describe("formatTanggalWaktu", () => {
 
   it("memakai tanda kosong untuk nilai yang tidak ada", () => {
     expect(formatTanggalWaktu(null)).toBe("—");
+  });
+});
+
+describe("formatTanggalWaktuUtc", () => {
+  // Dibandingkan dengan Date.UTC supaya hasilnya sama di zona waktu mesin mana pun.
+  const harapan = formatTanggalWaktu(new Date(Date.UTC(2026, 9, 2, 15, 15)));
+
+  it("string tanpa zona dibaca sebagai UTC, bukan waktu lokal", () => {
+    expect(formatTanggalWaktuUtc("2026-10-02T15:15:00")).toBe(harapan);
+  });
+
+  it("string yang sudah ber-zona tidak diubah", () => {
+    expect(formatTanggalWaktuUtc("2026-10-02T22:15:00+07:00")).toBe(harapan);
+    expect(formatTanggalWaktuUtc("2026-10-02T15:15:00Z")).toBe(harapan);
+  });
+
+  it("memakai tanda kosong untuk nilai yang tidak ada atau rusak", () => {
+    expect(formatTanggalWaktuUtc(null)).toBe("—");
+    expect(formatTanggalWaktuUtc("bukan tanggal")).toBe("—");
+  });
+});
+
+describe("bacaWaktuUtc", () => {
+  it("string tanpa zona dibaca sebagai UTC", () => {
+    expect(bacaWaktuUtc("2026-10-02T15:15:00")?.getTime()).toBe(
+      Date.UTC(2026, 9, 2, 15, 15),
+    );
+  });
+
+  it("offset yang ada dihormati", () => {
+    expect(bacaWaktuUtc("2026-10-02T22:15:00+07:00")?.getTime()).toBe(
+      Date.UTC(2026, 9, 2, 15, 15),
+    );
+  });
+
+  it("kosong atau rusak → null", () => {
+    expect(bacaWaktuUtc(null)).toBeNull();
+    expect(bacaWaktuUtc("bukan tanggal")).toBeNull();
   });
 });
 

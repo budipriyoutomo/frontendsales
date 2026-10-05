@@ -17,7 +17,11 @@ import {
   KeadaanKosong,
 } from "@/components/dashboard/states";
 import { useSyncStatus } from "@/hooks/use-sales";
-import { formatAngka, formatTanggal, formatTanggalWaktu } from "@/lib/format";
+import {
+  formatAngka,
+  formatTanggal,
+  formatTanggalWaktuUtc,
+} from "@/lib/format";
 import {
   labelKesegaran,
   nilaiKesegaran,
@@ -99,7 +103,7 @@ export function SyncStatusView() {
                               tanggal kosong (7.5). */}
                           {k === "belum-pernah"
                             ? "Belum pernah"
-                            : formatTanggalWaktu(row.last_synced_at)}
+                            : formatTanggalWaktuUtc(row.last_synced_at)}
                         </TableCell>
                         <TableCell>
                           {formatTanggal(row.last_sale_date)}

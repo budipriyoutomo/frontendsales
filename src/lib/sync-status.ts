@@ -1,3 +1,4 @@
+import { bacaWaktuUtc } from "@/lib/format";
 import type { SyncStatusRow } from "@/types/domain";
 
 /**
@@ -20,10 +21,10 @@ export function nilaiKesegaran(
   row: Pick<SyncStatusRow, "last_synced_at">,
   sekarang: Date = new Date(),
 ): Kesegaran {
-  if (!row.last_synced_at) return "belum-pernah";
-
-  const terakhir = new Date(row.last_synced_at);
-  if (Number.isNaN(terakhir.getTime())) return "belum-pernah";
+  // UTC tanpa zona dari backend — dibaca sebagai waktu lokal, outlet yang
+  // baru sync di WIB terlihat 7 jam lebih tua.
+  const terakhir = bacaWaktuUtc(row.last_synced_at);
+  if (!terakhir) return "belum-pernah";
 
   const selisihJam =
     (sekarang.getTime() - terakhir.getTime()) / (1000 * 60 * 60);

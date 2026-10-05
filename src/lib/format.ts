@@ -74,6 +74,27 @@ export function formatTanggalWaktu(
 }
 
 /**
+ * Untuk kolom backend yang menyimpan UTC tanpa zona — semua `created_at`,
+ * `updated_at`, `last_synced_at`, `sent_at` diisi `utcnow()`.
+ * `new Date("2026-10-02T15:15:00")` membacanya sebagai waktu LOKAL, jadi
+ * 22:15 WIB akan tampil 15:15. Tanpa offset, ditambahkan "Z" dulu.
+ *
+ * BUKAN untuk waktu dari mesin POS (`paid_time`, `close_time`) — itu jam
+ * lokal outlet.
+ */
+export function bacaWaktuUtc(nilai: string | null | undefined): Date | null {
+  if (!nilai) return null;
+  const berZona = /(Z|[+-]\d{2}:?\d{2})$/i.test(nilai);
+  return keTanggal(berZona ? nilai : `${nilai}Z`);
+}
+
+export function formatTanggalWaktuUtc(
+  nilai: string | null | undefined,
+): string {
+  return formatTanggalWaktu(bacaWaktuUtc(nilai));
+}
+
+/**
  * Lama tunggu dalam bahasa manusia, untuk pesan `429` (TODO 2.6).
  * "Coba lagi dalam 5 menit" jauh lebih berguna daripada "login gagal".
  */

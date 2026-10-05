@@ -65,8 +65,8 @@ export function GroupRecap({
       <CardHeader>
         <CardTitle as="h2">Rekap per product group</CardTitle>
         <CardDescription>
-          Qty terjual per produk, outlet, dan tanggal. Transaksi void ikut
-          terhitung, jadi angkanya bisa berbeda dengan kartu ringkasan.
+          Qty terjual per produk, outlet, dan tanggal. Transaksi void tidak
+          dihitung, sama seperti kartu ringkasan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

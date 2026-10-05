@@ -32,7 +32,7 @@ import {
 import { useSalesProductGroups } from "@/hooks/use-sales";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
-import { formatTanggalWaktu } from "@/lib/format";
+import { formatTanggalWaktuUtc } from "@/lib/format";
 import {
   normalisasiGroup,
   saranGroup,
@@ -283,8 +283,12 @@ export function ProductGroupsView() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{formatTanggalWaktu(m.created_at)}</TableCell>
-                      <TableCell>{formatTanggalWaktu(m.updated_at)}</TableCell>
+                      <TableCell>
+                        {formatTanggalWaktuUtc(m.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        {formatTanggalWaktuUtc(m.updated_at)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="outline"

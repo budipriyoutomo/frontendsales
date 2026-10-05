@@ -30,7 +30,7 @@ describe("navUntukRole (3.2, 3.7)", () => {
   it("role outlet hanya melihat menu yang boleh diaksesnya", () => {
     const menu = label("outlet");
 
-    expect(menu).toEqual(["Dashboard", "Transaksi", "Status Sync"]);
+    expect(menu).toEqual(["Dashboard", "Transaksi", "Status Sync", "Closing"]);
   });
 });
 
@@ -55,6 +55,16 @@ describe("bolehMasukHalaman (3.3, 3.9)", () => {
     expect(bolehMasukHalaman("admin", "/product-group")).toBe(true);
     expect(bolehMasukHalaman("manager", "/product-group")).toBe(false);
     expect(bolehMasukHalaman("outlet", "/product-group")).toBe(false);
+  });
+
+  it("closing report terbuka untuk semua role, mapping menunya khusus admin", () => {
+    for (const role of ["admin", "manager", "outlet"] as Role[]) {
+      expect(bolehMasukHalaman(role, "/closing")).toBe(true);
+    }
+    expect(bolehMasukHalaman("admin", "/closing-menu")).toBe(true);
+    // "/closing-menu" tidak boleh lolos lewat aturan "/closing".
+    expect(bolehMasukHalaman("manager", "/closing-menu")).toBe(false);
+    expect(bolehMasukHalaman("outlet", "/closing-menu")).toBe(false);
   });
 
   it("mengizinkan admin ke mana saja", () => {

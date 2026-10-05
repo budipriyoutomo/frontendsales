@@ -97,11 +97,13 @@ const state = {
       updated_at: null,
     },
   ],
-  users: Object.values(USERS).map(profil).map((u) => ({
-    ...u,
-    created_at: "2026-09-01T08:00:00",
-    updated_at: null,
-  })),
+  users: Object.values(USERS)
+    .map(profil)
+    .map((u) => ({
+      ...u,
+      created_at: "2026-09-01T08:00:00",
+      updated_at: null,
+    })),
   /** Group yang dipublish (TODO Fase 10). */
   productGroups: [
     {
@@ -112,12 +114,174 @@ const state = {
       updated_at: null,
     },
   ],
+  /** Closing report dari RabbitMQ (Fase 11). SU-001 sengaja belum dipetakan. */
+  closingMenus: [
+    {
+      id: 1,
+      menu_code: "SU-001",
+      menu_id: "0a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c51",
+      menu_name: "Salmon Nigiri",
+      brand_code: "MHR",
+      products: [],
+      first_seen_at: "2026-09-12T15:15:00",
+      last_seen_at: "2026-09-12T15:15:00",
+    },
+    {
+      id: 2,
+      menu_code: "SU-002",
+      menu_id: "0a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c52",
+      menu_name: "Tuna Nigiri",
+      brand_code: "MHR",
+      products: [
+        {
+          id: 1,
+          product_id: 200201,
+          product_name: "Tuna HR",
+          multiplier: 1,
+          is_active: true,
+          created_at: "2026-09-12T15:15:00",
+          updated_at: null,
+        },
+      ],
+      first_seen_at: "2026-09-12T15:15:00",
+      last_seen_at: "2026-09-12T15:15:00",
+    },
+  ],
   /** Dinyalakan test untuk memaksa access token berikutnya ditolak (2.12). */
   paksa401Sekali: false,
 };
 
+/** Produk POS yang bisa dipetakan + qty terjualnya per outlet (2026-09-12). */
+const PRODUK_POS = [
+  { product_id: 200104, product_name: "Salmon HR", product_group: "MAKANAN" },
+  { product_id: 200201, product_name: "Tuna HR", product_group: "MAKANAN" },
+];
+const QTY_POS = {
+  OUTLET_001: { 200104: 42, 200201: 10 },
+  OUTLET_002: { 200104: 5, 200201: 7 },
+};
+
+/** Item closing aktif per outlet: [menu_code, sold, waste, adjustment, compensation]. */
+const CLOSING = {
+  OUTLET_001: [
+    ["SU-001", 42, 3, 0, 0],
+    ["SU-002", 12, 0, 0, 0],
+  ],
+  OUTLET_002: [["SU-001", 5, 1, 0, 0]],
+};
+const TANGGAL_CLOSING = "2026-09-12";
+
+function closingReportId(outlet) {
+  return outlet === "OUTLET_001"
+    ? "6f1c2a9e-3b4d-4e5f-8a7b-9c0d1e2f3a01"
+    : "6f1c2a9e-3b4d-4e5f-8a7b-9c0d1e2f3a02";
+}
+
+function ringkasanClosing(outlet) {
+  return {
+    closing_report_id: closingReportId(outlet),
+    report_date: TANGGAL_CLOSING,
+    outlet_code: outlet,
+    outlet_name: `Maharasa ${outlet}`,
+    brand_code: "MHR",
+    brand_name: "Maharasa",
+    sent_at: "2026-09-12T15:15:00",
+    received_at: "2026-09-12T15:15:01",
+    revision_count: 1,
+    item_count: CLOSING[outlet].length,
+  };
+}
+
+const menuTampil = (m) => ({
+  ...m,
+  is_mapped: m.products.some((p) => p.is_active),
+});
+
+/**
+ * Meniru `compare_with_pos` per ProductID: menu yang dipetakan ke produk yang
+ * sama dijumlah — closing = Σ (sold + adjustment + compensation) × pengali,
+ * selisih = qty POS − closing.
+ */
+function perbandingan(outlet) {
+  const baris = [];
+  for (const o of Object.keys(CLOSING).sort()) {
+    if (outlet && o !== outlet) continue;
+    const item = CLOSING[o].map(
+      ([kode, sold, waste, adjustment, compensation]) => ({
+        menu: state.closingMenus.find((x) => x.menu_code === kode),
+        sold,
+        waste,
+        adjustment,
+        compensation,
+      }),
+    );
+    const produk = new Map();
+    const belum = [];
+    for (const it of item) {
+      const aktif = it.menu.products.filter((p) => p.is_active);
+      if (aktif.length === 0) belum.push(it);
+      for (const p of aktif) {
+        if (!produk.has(p.product_id)) {
+          produk.set(p.product_id, { nama: p.product_name, menus: [] });
+        }
+        produk
+          .get(p.product_id)
+          .menus.push({ ...it, multiplier: p.multiplier });
+      }
+    }
+    const infoMenu = (it, multiplier) => ({
+      menu_id: it.menu.menu_id,
+      menu_code: it.menu.menu_code,
+      menu_name: it.menu.menu_name,
+      multiplier,
+      sold: it.sold,
+      waste: it.waste,
+      adjustment: it.adjustment,
+      compensation: it.compensation,
+    });
+    const total = (it) => it.sold + it.adjustment + it.compensation;
+    for (const [product_id, { nama, menus }] of [...produk].sort(
+      (a, b) => a[0] - b[0],
+    )) {
+      const closing_qty = menus.reduce(
+        (n, it) => n + total(it) * it.multiplier,
+        0,
+      );
+      const pos_qty = QTY_POS[o][product_id] ?? 0;
+      baris.push({
+        outlet_code: o,
+        production_date: TANGGAL_CLOSING,
+        product_id,
+        product_name: nama,
+        menus: menus.map((it) => infoMenu(it, it.multiplier)),
+        closing_qty,
+        pos_qty,
+        selisih: pos_qty - closing_qty,
+        status: pos_qty === closing_qty ? "cocok" : "selisih",
+      });
+    }
+    for (const it of belum) {
+      baris.push({
+        outlet_code: o,
+        production_date: TANGGAL_CLOSING,
+        product_id: null,
+        product_name: null,
+        menus: [infoMenu(it, null)],
+        closing_qty: total(it),
+        pos_qty: null,
+        selisih: null,
+        status: "belum_dipetakan",
+      });
+    }
+  }
+  return baris;
+}
+
 /** Sama dengan `normalize_product_group` di backend: hanya SPASI di ujung. */
-const normalGroup = (v) => String(v ?? "").replace(/^ +| +$/g, "").toUpperCase();
+const normalGroup = (v) =>
+  String(v ?? "")
+    .replace(/^ +| +$/g, "")
+    .toUpperCase();
 
 /** Group yang ADA di data penjualan — beda dengan yang dipublish. */
 const GROUP_DI_DATA = ["COLORPLATE", "MAKANAN", "MINUMAN"];
@@ -278,7 +442,9 @@ const server = createServer(async (req, res) => {
   const butuhAdmin =
     path.startsWith("/api/api-keys") ||
     path.startsWith("/api/users") ||
-    path.startsWith("/api/product-groups");
+    path.startsWith("/api/product-groups") ||
+    path.startsWith("/api/product-menus") ||
+    path.startsWith("/api/closing-menus");
   if (butuhAdmin && user.role !== "admin") {
     return tolak(res, 403, "Akses ditolak");
   }
@@ -297,7 +463,9 @@ const server = createServer(async (req, res) => {
 
   // ---- penjualan ----------------------------------------------------
   if (path === "/api/sales/summary") {
-    const baris = SALES.filter((s) => !outletScope || s.outlet_code === outletScope);
+    const baris = SALES.filter(
+      (s) => !outletScope || s.outlet_code === outletScope,
+    );
     const total = baris.reduce((n, s) => n + s.receipt_pay_price, 0);
     return json(
       res,
@@ -316,9 +484,21 @@ const server = createServer(async (req, res) => {
       res,
       200,
       bungkus([
-        { sale_date: "2026-09-10", total_transactions: 4, total_amount: 600000 },
-        { sale_date: "2026-09-11", total_transactions: 6, total_amount: 900000 },
-        { sale_date: "2026-09-12", total_transactions: 5, total_amount: 750000 },
+        {
+          sale_date: "2026-09-10",
+          total_transactions: 4,
+          total_amount: 600000,
+        },
+        {
+          sale_date: "2026-09-11",
+          total_transactions: 6,
+          total_amount: 900000,
+        },
+        {
+          sale_date: "2026-09-12",
+          total_transactions: 5,
+          total_amount: 750000,
+        },
       ]),
     );
   }
@@ -328,8 +508,16 @@ const server = createServer(async (req, res) => {
       res,
       200,
       bungkus([
-        { outlet_code: "OUTLET_001", total_transactions: 60, total_amount: 9000000 },
-        { outlet_code: "OUTLET_002", total_transactions: 60, total_amount: 8100000 },
+        {
+          outlet_code: "OUTLET_001",
+          total_transactions: 60,
+          total_amount: 9000000,
+        },
+        {
+          outlet_code: "OUTLET_002",
+          total_transactions: 60,
+          total_amount: 8100000,
+        },
       ]),
     );
   }
@@ -373,7 +561,11 @@ const server = createServer(async (req, res) => {
     if (groups.length === 0) {
       return json(res, 422, {
         detail: [
-          { loc: ["query", "product_group"], msg: "Field required", type: "missing" },
+          {
+            loc: ["query", "product_group"],
+            msg: "Field required",
+            type: "missing",
+          },
         ],
       });
     }
@@ -391,7 +583,8 @@ const server = createServer(async (req, res) => {
   }
 
   if (path === "/api/sales/export") {
-    const csv = "transaction_id,reference_no,receipt_pay_price\n1,REF-0001,150000\n";
+    const csv =
+      "transaction_id,reference_no,receipt_pay_price\n1,REF-0001,150000\n";
     res.writeHead(200, {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": 'attachment; filename="transaksi_uji.csv"',
@@ -400,7 +593,9 @@ const server = createServer(async (req, res) => {
   }
 
   if (path === "/api/sales/" || path === "/api/sales") {
-    const semua = SALES.filter((s) => !outletScope || s.outlet_code === outletScope);
+    const semua = SALES.filter(
+      (s) => !outletScope || s.outlet_code === outletScope,
+    );
     const limit = Number(url.searchParams.get("limit") ?? 50);
     const offset = Number(url.searchParams.get("offset") ?? 0);
     const potongan = semua.slice(offset, offset + limit);
@@ -514,7 +709,10 @@ const server = createServer(async (req, res) => {
     return json(
       res,
       201,
-      bungkus(entri, { api_key: `mhr_baru_${kode}_rahasia`, message: "dibuat" }),
+      bungkus(entri, {
+        api_key: `mhr_baru_${kode}_rahasia`,
+        message: "dibuat",
+      }),
     );
   }
 
@@ -528,7 +726,10 @@ const server = createServer(async (req, res) => {
     return json(
       res,
       200,
-      bungkus(entri, { api_key: `mhr_rotasi_${kode}_rahasia`, message: "dirotasi" }),
+      bungkus(entri, {
+        api_key: `mhr_rotasi_${kode}_rahasia`,
+        message: "dirotasi",
+      }),
     );
   }
 
@@ -562,7 +763,11 @@ const server = createServer(async (req, res) => {
     if (state.users.some((u) => u.email === body.email)) {
       return json(res, 422, {
         detail: [
-          { loc: ["body", "email"], msg: "Email sudah dipakai", type: "value_error" },
+          {
+            loc: ["body", "email"],
+            msg: "Email sudah dipakai",
+            type: "value_error",
+          },
         ],
       });
     }
@@ -642,13 +847,154 @@ const server = createServer(async (req, res) => {
     if (typeof body.is_active !== "boolean") {
       return json(res, 422, {
         detail: [
-          { loc: ["body", "is_active"], msg: "Field required", type: "missing" },
+          {
+            loc: ["body", "is_active"],
+            msg: "Field required",
+            type: "missing",
+          },
         ],
       });
     }
     target.is_active = body.is_active;
     target.updated_at = new Date().toISOString();
     return json(res, 200, bungkus(target));
+  }
+
+  // ---- closing report (Fase 11) -------------------------------------
+  if (path === "/api/product-menus/candidates" && method === "GET") {
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const data = PRODUK_POS.filter(
+      (p) =>
+        !q ||
+        p.product_name.toLowerCase().includes(q) ||
+        String(p.product_id).includes(q),
+    ).map((p) => ({
+      ...p,
+      outlet_codes: ["OUTLET_001", "OUTLET_002"],
+      last_sale_date: TANGGAL_CLOSING,
+    }));
+    return json(res, 200, bungkus(data));
+  }
+
+  if (path === "/api/closing-menus" && method === "GET") {
+    const status = url.searchParams.get("status") ?? "all";
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const data = state.closingMenus
+      .map(menuTampil)
+      .filter((m) => status !== "mapped" || m.is_mapped)
+      .filter((m) => status !== "unmapped" || !m.is_mapped)
+      .filter(
+        (m) =>
+          !q ||
+          m.menu_code.toLowerCase().includes(q) ||
+          m.menu_name.toLowerCase().includes(q),
+      );
+    return json(res, 200, bungkus(data));
+  }
+
+  const tambahProduk = /^\/api\/closing-menus\/(\d+)\/products$/.exec(path);
+  if (tambahProduk && method === "POST") {
+    const menu = state.closingMenus.find(
+      (m) => m.id === Number(tambahProduk[1]),
+    );
+    if (!menu) return tolak(res, 404, "Menu closing tidak ditemukan");
+    const body = await bacaBody(req);
+    const produk = PRODUK_POS.find((p) => p.product_id === body.product_id);
+    if (!produk) {
+      return tolak(
+        res,
+        422,
+        `ProductID ${body.product_id} tidak ditemukan di data penjualan.`,
+      );
+    }
+    if (menu.products.some((p) => p.product_id === body.product_id)) {
+      return tolak(
+        res,
+        409,
+        "ProductID sudah dipetakan ke menu ini. Ubah lewat PATCH.",
+      );
+    }
+    const baru = {
+      id:
+        Math.max(
+          0,
+          ...state.closingMenus.flatMap((m) => m.products.map((p) => p.id)),
+        ) + 1,
+      product_id: produk.product_id,
+      product_name: produk.product_name,
+      multiplier: body.multiplier ?? 1,
+      is_active: body.is_active !== false,
+      created_at: new Date().toISOString().slice(0, 19),
+      updated_at: null,
+    };
+    menu.products.push(baru);
+    return json(res, 201, bungkus(baru));
+  }
+
+  const ubahProduk = /^\/api\/closing-menus\/(\d+)\/products\/(\d+)$/.exec(
+    path,
+  );
+  if (ubahProduk && method === "PATCH") {
+    const menu = state.closingMenus.find((m) => m.id === Number(ubahProduk[1]));
+    const produk = menu?.products.find((p) => p.id === Number(ubahProduk[2]));
+    if (!produk) return tolak(res, 404, "Mapping tidak ditemukan");
+    const body = await bacaBody(req);
+    if (body.multiplier !== undefined) produk.multiplier = body.multiplier;
+    if (body.is_active !== undefined) produk.is_active = body.is_active;
+    produk.updated_at = new Date().toISOString().slice(0, 19);
+    return json(res, 200, bungkus(produk));
+  }
+
+  if (path === "/api/closing-reports/comparison" && method === "GET") {
+    return json(res, 200, bungkus(perbandingan(outletScope)));
+  }
+
+  if (path === "/api/closing-reports" && method === "GET") {
+    const data = Object.keys(CLOSING)
+      .filter((o) => !outletScope || o === outletScope)
+      .map(ringkasanClosing);
+    return json(res, 200, {
+      ...bungkus(data),
+      pagination: { limit: 50, offset: 0, total: data.length, has_more: false },
+    });
+  }
+
+  const detailClosing = /^\/api\/closing-reports\/([0-9a-f-]{36})$/.exec(path);
+  if (detailClosing && method === "GET") {
+    const outlet = Object.keys(CLOSING).find(
+      (o) => closingReportId(o) === detailClosing[1],
+    );
+    // Laporan outlet lain = tidak ada, bukan 403 (sama dengan backend).
+    if (!outlet || (outletScope && outlet !== outletScope)) {
+      return tolak(res, 404, "Closing report tidak ditemukan");
+    }
+    const ringkas = ringkasanClosing(outlet);
+    const items = CLOSING[outlet].map(
+      ([kode, sold, waste, adjustment, compensation]) => {
+        const menu = state.closingMenus.find((m) => m.menu_code === kode);
+        return {
+          menu_id: menu.menu_id,
+          menu_code: kode,
+          menu_name: menu.menu_name,
+          production_date: TANGGAL_CLOSING,
+          sold,
+          waste,
+          adjustment,
+          compensation,
+        };
+      },
+    );
+    const revisions = [
+      {
+        id: 1,
+        message_id: ringkas.closing_report_id,
+        sent_at: ringkas.sent_at,
+        received_at: ringkas.received_at,
+        is_current: true,
+        item_count: ringkas.item_count,
+      },
+    ];
+    return json(res, 200, bungkus({ ...ringkas, items, revisions }));
   }
 
   return tolak(res, 404, `Tidak ada rute ${method} ${path}`);

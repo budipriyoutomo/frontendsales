@@ -259,3 +259,34 @@ describe("FilterBar — brand", () => {
     expect(screen.queryByRole("combobox", { name: /brand/i })).toBeNull();
   });
 });
+
+describe("FilterBar — tanpaBrand (halaman closing)", () => {
+  it("menyembunyikan pemilih brand dan tidak meminta daftar brand", async () => {
+    let brandDiminta = false;
+    server.use(
+      http.get("/api/brands", () => {
+        brandDiminta = true;
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    renderWithQuery(<FilterBar role="admin" tanpaBrand />);
+
+    await screen.findByRole("combobox", { name: /outlet/i });
+    expect(screen.queryByRole("combobox", { name: /brand/i })).toBeNull();
+    expect(brandDiminta).toBe(false);
+  });
+
+  it("brand di URL tidak menyaring pilihan outlet", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2026-03-01&end_date=2026-03-31&brand=MHR",
+    );
+    renderWithQuery(<FilterBar role="admin" tanpaBrand />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("combobox", { name: /outlet/i }));
+
+    expect(await screen.findByRole("option", { name: "OUT2" })).toBeVisible();
+    expect(screen.getByRole("option", { name: "OUT3" })).toBeVisible();
+  });
+});

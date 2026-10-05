@@ -34,8 +34,17 @@ const PRESET: { label: string; hari: number }[] = [
  * Sengaja satu baris global, bukan filter per kartu: semua angka di halaman
  * ini harus menggambarkan irisan data yang sama. Nilainya hidup di URL (4.8)
  * supaya tautannya bisa dibagikan dan tombol back bekerja.
+ *
+ * `tanpaBrand` untuk halaman yang endpoint-nya tidak menerima `brand`
+ * (closing report) — pemilih yang tidak berefek hanya menyesatkan.
  */
-export function FilterBar({ role }: { role: Role }) {
+export function FilterBar({
+  role,
+  tanpaBrand = false,
+}: {
+  role: Role;
+  tanpaBrand?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -47,12 +56,13 @@ export function FilterBar({ role }: { role: Role }) {
 
   const tampilkanOutlet = bolehLihatPemilihOutlet(role);
   const outlets = useOutlets(tampilkanOutlet);
-  const brands = useBrands(tampilkanOutlet);
+  const brands = useBrands(tampilkanOutlet && !tanpaBrand);
+  const brandBerlaku = tanpaBrand ? undefined : filter.brand;
 
   // Dengan brand terpilih, pilihan outlet dipersempit ke outlet brand itu —
   // outlet lain hanya akan menghasilkan laporan kosong.
   const pilihanOutlet = (outlets.data ?? []).filter(
-    (o) => !filter.brand || o.brand_code === filter.brand,
+    (o) => !brandBerlaku || o.brand_code === brandBerlaku,
   );
 
   function terapkan(berikutnya: Filter) {
@@ -120,7 +130,9 @@ export function FilterBar({ role }: { role: Role }) {
         />
       </div>
 
-      {tampilkanOutlet && (brands.data?.length || filter.brand) ? (
+      {tampilkanOutlet &&
+      !tanpaBrand &&
+      (brands.data?.length || filter.brand) ? (
         // Disembunyikan sampai ada brand terdaftar — pemilih tanpa pilihan
         // hanya memakan tempat. Tetap tampil kalau URL sudah membawa brand,
         // supaya filter yang sedang berlaku selalu terlihat.

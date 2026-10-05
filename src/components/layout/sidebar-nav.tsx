@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ClipboardCheck,
   KeyRound,
+  Link2,
   Layers,
   LayoutDashboard,
   ReceiptText,
@@ -18,6 +20,8 @@ const IKON = {
   dashboard: LayoutDashboard,
   transaksi: ReceiptText,
   sync: RefreshCw,
+  closing: ClipboardCheck,
+  mapping: Link2,
   kunci: KeyRound,
   group: Layers,
   brand: Store,

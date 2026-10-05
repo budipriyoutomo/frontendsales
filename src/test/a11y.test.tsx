@@ -11,6 +11,8 @@ import { SyncStatusView } from "@/components/sync/sync-status-view";
 import { AksesDitolak } from "@/components/auth/akses-ditolak";
 import { ProductGroupsView } from "@/components/admin/product-groups-view";
 import { GroupRecap } from "@/components/dashboard/group-recap";
+import { ClosingView } from "@/components/closing/closing-view";
+import { ClosingMenusView } from "@/components/admin/closing-menus-view";
 
 /**
  * Cek aksesibilitas dasar (TODO 8.7).
@@ -159,6 +161,78 @@ describe("Aksesibilitas dasar (8.7)", () => {
       />,
     );
     await screen.findByText("Piring Merah");
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("perbandingan closing vs POS bebas pelanggaran", async () => {
+    server.use(
+      http.get("/api/outlets", () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ outlet_code: "OUT1", is_active: true, brand_code: null }],
+        }),
+      ),
+      http.get("/api/closing-reports/comparison", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              outlet_code: "OUT1",
+              production_date: "2026-09-12",
+              product_id: 900001,
+              product_name: "RED",
+              menus: [
+                {
+                  menu_id: "0a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c5d",
+                  menu_code: "SU-001",
+                  menu_name: "Salmon Nigiri",
+                  multiplier: 1,
+                  sold: 5,
+                  waste: 1,
+                  adjustment: -1,
+                  compensation: 0,
+                },
+              ],
+              closing_qty: 4,
+              pos_qty: 3,
+              selisih: -1,
+              status: "selisih",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const { container } = renderWithQuery(<ClosingView role="admin" />);
+    await screen.findByText("Salmon Nigiri");
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("halaman mapping menu closing bebas pelanggaran", async () => {
+    server.use(
+      http.get("/api/closing-menus", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              id: 1,
+              menu_code: "SU-001",
+              menu_id: "0a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c5d",
+              menu_name: "Salmon Nigiri",
+              is_mapped: false,
+              products: [],
+              first_seen_at: "2026-09-12T08:00:00",
+              last_seen_at: "2026-09-12T08:00:00",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const { container } = renderWithQuery(<ClosingMenusView />);
+    await screen.findByText("Salmon Nigiri");
 
     expect(await periksa(container)).toEqual([]);
   });

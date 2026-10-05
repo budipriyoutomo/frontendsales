@@ -100,11 +100,17 @@ test.describe("Manager (8.3)", () => {
 });
 
 test.describe("Outlet (8.3)", () => {
-  test("hanya melihat tiga menu yang jadi haknya", async ({ page }) => {
+  test("hanya melihat empat menu yang jadi haknya", async ({ page }) => {
     await masuk(page, "outlet");
 
     const nav = page.getByRole("navigation", { name: /menu utama/i }).first();
-    await expect(nav.getByRole("link")).toHaveCount(3);
+    // Closing (11.2) terbuka untuk semua role; datanya di-scope backend.
+    await expect(nav.getByRole("link")).toHaveText([
+      "Dashboard",
+      "Transaksi",
+      "Status Sync",
+      "Closing",
+    ]);
     await expect(nav.getByRole("link", { name: "API Key" })).toBeHidden();
     await expect(nav.getByRole("link", { name: "Pengguna" })).toBeHidden();
   });

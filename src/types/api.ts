@@ -772,6 +772,122 @@ export interface paths {
         patch: operations["update_brand_api_brands__brand_id__patch"];
         trace?: never;
     };
+    "/api/closing-menus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Closing Menus
+         * @description menuCode yang pernah muncul di closing report. `unmapped` = belum punya mapping aktif.
+         */
+        get: operations["list_closing_menus_api_closing_menus_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-menus/{menu_id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Closing Menu Product
+         * @description Hitung menu closing ini dari `product_id` POS × `multiplier`.
+         */
+        post: operations["create_closing_menu_product_api_closing_menus__menu_id__products_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-menus/{menu_id}/products/{mapping_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Closing Menu Product
+         * @description Ubah pengali / aktifkan / nonaktifkan. Berlaku langsung di laporan perbandingan.
+         */
+        patch: operations["update_closing_menu_product_api_closing_menus__menu_id__products__mapping_id__patch"];
+        trace?: never;
+    };
+    "/api/closing-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Closing Reports */
+        get: operations["list_closing_reports_api_closing_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-reports/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Closing With Pos
+         * @description Closing vs POS per outlet / tanggal produksi / menu.
+         *
+         *     `pos_qty` = Σ qty ProductID × pengali; `selisih` = sold − pos_qty.
+         */
+        get: operations["compare_closing_with_pos_api_closing_reports_comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-reports/{closing_report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Closing Report */
+        get: operations["get_closing_report_api_closing_reports__closing_report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -951,6 +1067,262 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClosingComparisonMenu */
+        ClosingComparisonMenu: {
+            /**
+             * Menu Id
+             * Format: uuid
+             */
+            menu_id: string;
+            /** Menu Code */
+            menu_code?: string | null;
+            /** Menu Name */
+            menu_name: string;
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Sold */
+            sold: number;
+            /** Waste */
+            waste: number;
+            /** Adjustment */
+            adjustment: number;
+            /** Compensation */
+            compensation: number;
+        };
+        /** ClosingComparisonResponse */
+        ClosingComparisonResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingComparisonRow"][];
+        };
+        /**
+         * ClosingComparisonRow
+         * @description Satu produk POS (atau satu menu yang belum dipetakan) per outlet & tanggal.
+         *
+         *     closing_qty = Σ (sold + adjustment + compensation) × pengali menu-menunya;
+         *     selisih = pos_qty − closing_qty (rumus pengirim).
+         */
+        ClosingComparisonRow: {
+            /** Outlet Code */
+            outlet_code: string;
+            /**
+             * Production Date
+             * Format: date
+             */
+            production_date: string;
+            /** Product Id */
+            product_id?: number | null;
+            /** Product Name */
+            product_name?: string | null;
+            /** Menus */
+            menus?: components["schemas"]["ClosingComparisonMenu"][];
+            /** Closing Qty */
+            closing_qty?: number | null;
+            /** Pos Qty */
+            pos_qty?: number | null;
+            /** Selisih */
+            selisih?: number | null;
+            /** Status */
+            status: string;
+        };
+        /** ClosingMenuListResponse */
+        ClosingMenuListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingMenuResponse"][];
+        };
+        /** ClosingMenuProductDetailResponse */
+        ClosingMenuProductDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ClosingMenuProductResponse"];
+        };
+        /** ClosingMenuProductResponse */
+        ClosingMenuProductResponse: {
+            /** Id */
+            id: number;
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
+            /** Multiplier */
+            multiplier: number;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** ClosingMenuResponse */
+        ClosingMenuResponse: {
+            /** Id */
+            id: number;
+            /** Menu Code */
+            menu_code?: string | null;
+            /**
+             * Menu Id
+             * Format: uuid
+             */
+            menu_id: string;
+            /** Menu Name */
+            menu_name: string;
+            /** Brand Code */
+            brand_code?: string | null;
+            /** Is Mapped */
+            is_mapped: boolean;
+            /** Products */
+            products?: components["schemas"]["ClosingMenuProductResponse"][];
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+        };
+        /** ClosingReportDetail */
+        ClosingReportDetail: {
+            /**
+             * Closing Report Id
+             * Format: uuid
+             */
+            closing_report_id: string;
+            /**
+             * Report Date
+             * Format: date
+             */
+            report_date: string;
+            /** Outlet Code */
+            outlet_code: string;
+            /** Outlet Name */
+            outlet_name: string;
+            /** Brand Code */
+            brand_code: string;
+            /** Brand Name */
+            brand_name: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /** Received At */
+            received_at?: string | null;
+            /** Revision Count */
+            revision_count: number;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["ClosingReportItemResponse"][];
+            /** Revisions */
+            revisions: components["schemas"]["ClosingRevisionResponse"][];
+        };
+        /** ClosingReportDetailResponse */
+        ClosingReportDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ClosingReportDetail"];
+        };
+        /** ClosingReportItemResponse */
+        ClosingReportItemResponse: {
+            /**
+             * Menu Id
+             * Format: uuid
+             */
+            menu_id: string;
+            /** Menu Code */
+            menu_code?: string | null;
+            /** Menu Name */
+            menu_name: string;
+            /** Production Date */
+            production_date?: string | null;
+            /** Sold */
+            sold: number;
+            /** Waste */
+            waste: number;
+            /** Adjustment */
+            adjustment: number;
+            /** Compensation */
+            compensation: number;
+        };
+        /** ClosingReportListResponse */
+        ClosingReportListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingReportSummary"][];
+            pagination: components["schemas"]["PaginationMeta"];
+        };
+        /** ClosingReportSummary */
+        ClosingReportSummary: {
+            /**
+             * Closing Report Id
+             * Format: uuid
+             */
+            closing_report_id: string;
+            /**
+             * Report Date
+             * Format: date
+             */
+            report_date: string;
+            /** Outlet Code */
+            outlet_code: string;
+            /** Outlet Name */
+            outlet_name: string;
+            /** Brand Code */
+            brand_code: string;
+            /** Brand Name */
+            brand_name: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /** Received At */
+            received_at?: string | null;
+            /** Revision Count */
+            revision_count: number;
+            /** Item Count */
+            item_count: number;
+        };
+        /**
+         * ClosingRevisionResponse
+         * @description Payload mentah sengaja tidak ikut — isinya sudah terwakili header & item.
+         */
+        ClosingRevisionResponse: {
+            /** Id */
+            id: number;
+            /** Message Id */
+            message_id: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Item Count */
+            item_count: number;
+        };
         /** ColorplateListResponse */
         ColorplateListResponse: {
             /**
@@ -986,6 +1358,24 @@ export interface components {
             code: string;
             /** Name */
             name: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * CreateClosingMenuProductRequest
+         * @description Nama produk diambil server dari data penjualan terakhir ProductID ini.
+         */
+        CreateClosingMenuProductRequest: {
+            /** Product Id */
+            product_id: number;
+            /**
+             * Multiplier
+             * @default 1
+             */
+            multiplier: number;
             /**
              * Is Active
              * @default true
@@ -1869,6 +2259,16 @@ export interface components {
         UpdateBrandRequest: {
             /** Name */
             name?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+        };
+        /**
+         * UpdateClosingMenuProductRequest
+         * @description ProductID tidak bisa diganti — nonaktifkan lalu buat baris baru.
+         */
+        UpdateClosingMenuProductRequest: {
+            /** Multiplier */
+            multiplier?: number | null;
             /** Is Active */
             is_active?: boolean | null;
         };
@@ -3308,6 +3708,217 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_closing_menus_api_closing_menus_get: {
+        parameters: {
+            query?: {
+                status?: "all" | "mapped" | "unmapped";
+                /** @description Cari menuCode atau nama menu */
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_closing_menu_product_api_closing_menus__menu_id__products_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClosingMenuProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_closing_menu_product_api_closing_menus__menu_id__products__mapping_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: number;
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClosingMenuProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_closing_reports_api_closing_reports_get: {
+        parameters: {
+            query?: {
+                /** @description Kode outlet; diabaikan untuk role 'outlet' */
+                outlet?: string | null;
+                /** @description Tanggal closing awal (inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal closing akhir (inklusif) */
+                end_date?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingReportListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_closing_with_pos_api_closing_reports_comparison_get: {
+        parameters: {
+            query?: {
+                /** @description Kode outlet; diabaikan untuk role 'outlet' */
+                outlet?: string | null;
+                /** @description Tanggal produksi awal (inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal produksi akhir (inklusif) */
+                end_date?: string | null;
+                /** @description Ikutkan transaksi POS Deleted=1 */
+                include_deleted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingComparisonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_closing_report_api_closing_reports__closing_report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                closing_report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingReportDetailResponse"];
                 };
             };
             /** @description Validation Error */

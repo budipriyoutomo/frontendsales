@@ -38,7 +38,7 @@ import {
 } from "@/components/dashboard/states";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
-import { formatTanggalWaktu } from "@/lib/format";
+import { formatTanggalWaktuUtc } from "@/lib/format";
 import {
   PANJANG_PASSWORD_MINIMAL,
   bolehNonaktifkan,
@@ -277,7 +277,7 @@ export function UsersView({ sayaId }: { sayaId: number }) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {formatTanggalWaktu(u.created_at)}
+                          {formatTanggalWaktuUtc(u.created_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

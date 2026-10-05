@@ -16,6 +16,8 @@ export type NavItem = {
     | "dashboard"
     | "transaksi"
     | "sync"
+    | "closing"
+    | "mapping"
     | "kunci"
     | "group"
     | "brand"
@@ -45,6 +47,13 @@ export const NAV: readonly NavItem[] = [
     roles: SEMUA,
   },
   {
+    // Data closing ter-scope per outlet di backend, sama seperti transaksi.
+    href: "/closing",
+    label: "Closing",
+    icon: "closing",
+    roles: SEMUA,
+  },
+  {
     href: "/api-keys",
     label: "API Key",
     icon: "kunci",
@@ -56,6 +65,14 @@ export const NAV: readonly NavItem[] = [
     href: "/product-group",
     label: "Product Group",
     icon: "group",
+    roles: ["admin"],
+  },
+  {
+    // Mapping mengubah angka perbandingan semua outlet — sama seperti
+    // mapping product group, hanya admin.
+    href: "/closing-menu",
+    label: "Mapping Closing",
+    icon: "mapping",
     roles: ["admin"],
   },
   {
