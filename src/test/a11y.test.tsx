@@ -13,6 +13,7 @@ import { ProductGroupsView } from "@/components/admin/product-groups-view";
 import { GroupRecap } from "@/components/dashboard/group-recap";
 import { ClosingView } from "@/components/closing/closing-view";
 import { ClosingMenusView } from "@/components/admin/closing-menus-view";
+import { ClosingMessagesView } from "@/components/admin/closing-messages-view";
 
 /**
  * Cek aksesibilitas dasar (TODO 8.7).
@@ -233,6 +234,45 @@ describe("Aksesibilitas dasar (8.7)", () => {
 
     const { container } = renderWithQuery(<ClosingMenusView />);
     await screen.findByText("Salmon Nigiri");
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("halaman pesan RabbitMQ bebas pelanggaran", async () => {
+    server.use(
+      http.get("/api/closing-messages", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              id: 1,
+              received_at: "2026-10-02T15:15:02",
+              status: "ditolak",
+              reason: "gagal validasi",
+              warnings: ["compensation negatif: 1 menu"],
+              message_id: "6f1c2a9e-3b4d-4e5f-8a7b-9c0d1e2f3a4b",
+              outlet_code: "STTSM",
+              closing_report_id: null,
+              report_date: null,
+              item_count: null,
+              revision_id: null,
+              body_bytes: 512,
+            },
+          ],
+          pagination: { limit: 50, offset: 0, total: 1, has_more: false },
+          counts: {
+            baru: 0,
+            revisi: 0,
+            revisi_lama: 0,
+            duplikat: 0,
+            ditolak: 1,
+          },
+        }),
+      ),
+    );
+
+    const { container } = renderWithQuery(<ClosingMessagesView />);
+    await screen.findByText("gagal validasi");
 
     expect(await periksa(container)).toEqual([]);
   });

@@ -99,4 +99,41 @@ test.describe("Closing report (11.6)", () => {
     await expect(page.getByText(/halaman ini tidak untuk anda/i)).toBeVisible();
     await expect(page.getByText("Salmon Nigiri")).toHaveCount(0);
   });
+
+  test("admin memeriksa pesan RabbitMQ yang ditolak beserta JSON-nya", async ({
+    page,
+  }) => {
+    await masuk(page, "admin");
+    await page
+      .getByRole("navigation", { name: /menu utama/i })
+      .first()
+      .getByRole("link", { name: "Pesan RabbitMQ" })
+      .click();
+    await expect(page).toHaveURL(/\/closing-pesan/);
+
+    await page.getByRole("button", { name: "Ditolak (1)" }).click();
+    const baris = page.getByRole("row").filter({ hasText: "pesan-rusak-001" });
+    await expect(baris.getByText("gagal validasi")).toBeVisible();
+    await expect(
+      page.getByRole("row").filter({ hasText: "pesan-baik-001" }),
+    ).toHaveCount(0);
+
+    await baris.getByRole("button", { name: "Detail" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Input should be 1")).toBeVisible();
+    await expect(dialog.locator("pre")).toContainText('"version": 2');
+  });
+
+  test("pesan RabbitMQ hanya untuk admin", async ({ page }) => {
+    await masuk(page, "manager");
+
+    const nav = page.getByRole("navigation", { name: /menu utama/i }).first();
+    await expect(
+      nav.getByRole("link", { name: "Pesan RabbitMQ" }),
+    ).toBeHidden();
+
+    await page.goto("/closing-pesan");
+    await expect(page.getByText(/halaman ini tidak untuk anda/i)).toBeVisible();
+    await expect(page.getByText("pesan-rusak-001")).toHaveCount(0);
+  });
 });

@@ -598,6 +598,14 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       Σ (terjual + adj + komp) × pengali, POS, selisih = POS − closing.
       Menu tanpa kode tampil "tanpa kode" + brand; penjelasan pengali = unit
       produk POS per porsi. Tipe digenerate ulang; unit 307 dan E2E lulus.
+- [x] **11.10 Halaman Pesan RabbitMQ (2026-10-06)** — `/closing-pesan`, admin
+      saja (nav "Pesan RabbitMQ", ikon Inbox). Dari backend 7.8
+      `/api/closing-messages`: tombol status dengan jumlahnya, cari
+      messageId/outlet, tanggal terima; tabel diterima · status · outlet ·
+      tgl closing · item · messageId · keterangan (alasan ditolak / peringatan).
+      Detail: identitas pesan, tabel error validasi (`data.items[0].sold`),
+      peringatan, JSON asli atau teks mentah + tombol Salin. Unit + a11y + E2E
+      (`closing.spec.ts`) lulus.
 - [ ] **11.9 Test flaky lama** — `alur-utama.spec.ts` › "401 di tengah sesi…"
       sesekali gagal karena `getByText("OUTLET_001")` juga menangkap span
       pengukur recharts (`#recharts_measurement_span`). 3× ulang lulus semua;

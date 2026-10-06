@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardCheck,
+  Inbox,
   KeyRound,
   Link2,
   Layers,
@@ -22,6 +23,7 @@ const IKON = {
   sync: RefreshCw,
   closing: ClipboardCheck,
   mapping: Link2,
+  pesan: Inbox,
   kunci: KeyRound,
   group: Layers,
   brand: Store,

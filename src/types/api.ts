@@ -858,9 +858,10 @@ export interface paths {
         };
         /**
          * Compare Closing With Pos
-         * @description Closing vs POS per outlet / tanggal produksi / menu.
+         * @description Closing vs POS per outlet / tanggal produksi / ProductID POS.
          *
-         *     `pos_qty` = Σ qty ProductID × pengali; `selisih` = sold − pos_qty.
+         *     `closing_qty` = Σ (sold + adjustment + compensation) × pengali dari semua
+         *     menu yang dipetakan ke produk itu; `selisih` = pos_qty − closing_qty.
          */
         get: operations["compare_closing_with_pos_api_closing_reports_comparison_get"];
         put?: never;
@@ -880,6 +881,46 @@ export interface paths {
         };
         /** Get Closing Report */
         get: operations["get_closing_report_api_closing_reports__closing_report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Closing Messages
+         * @description Pesan terbaru dulu, tanpa payload. `counts` = jumlah per status untuk filter yang sama tanpa `status`.
+         */
+        get: operations["list_closing_messages_api_closing_messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-messages/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Closing Message
+         * @description Satu pesan beserta JSON asli (atau teks, kalau bukan JSON) dan detail error validasi.
+         */
+        get: operations["get_closing_message_api_closing_messages__log_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1194,6 +1235,127 @@ export interface components {
              * Format: date-time
              */
             last_seen_at: string;
+        };
+        /** ClosingMessageCounts */
+        ClosingMessageCounts: {
+            /**
+             * Baru
+             * @default 0
+             */
+            baru: number;
+            /**
+             * Revisi
+             * @default 0
+             */
+            revisi: number;
+            /**
+             * Revisi Lama
+             * @default 0
+             */
+            revisi_lama: number;
+            /**
+             * Duplikat
+             * @default 0
+             */
+            duplikat: number;
+            /**
+             * Ditolak
+             * @default 0
+             */
+            ditolak: number;
+        };
+        /** ClosingMessageDetail */
+        ClosingMessageDetail: {
+            /** Id */
+            id: number;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "baru" | "revisi" | "revisi_lama" | "duplikat" | "ditolak";
+            /** Reason */
+            reason?: string | null;
+            /** Warnings */
+            warnings?: string[] | null;
+            /** Message Id */
+            message_id?: string | null;
+            /** Outlet Code */
+            outlet_code?: string | null;
+            /** Closing Report Id */
+            closing_report_id?: string | null;
+            /** Report Date */
+            report_date?: string | null;
+            /** Item Count */
+            item_count?: number | null;
+            /** Revision Id */
+            revision_id?: number | null;
+            /** Body Bytes */
+            body_bytes: number;
+            /** Errors */
+            errors?: Record<string, never>[] | null;
+            /** Payload */
+            payload?: unknown | null;
+            /** Body Text */
+            body_text?: string | null;
+        };
+        /** ClosingMessageDetailResponse */
+        ClosingMessageDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ClosingMessageDetail"];
+        };
+        /** ClosingMessageListResponse */
+        ClosingMessageListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingMessageSummary"][];
+            pagination: components["schemas"]["PaginationMeta"];
+            counts: components["schemas"]["ClosingMessageCounts"];
+        };
+        /** ClosingMessageSummary */
+        ClosingMessageSummary: {
+            /** Id */
+            id: number;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "baru" | "revisi" | "revisi_lama" | "duplikat" | "ditolak";
+            /** Reason */
+            reason?: string | null;
+            /** Warnings */
+            warnings?: string[] | null;
+            /** Message Id */
+            message_id?: string | null;
+            /** Outlet Code */
+            outlet_code?: string | null;
+            /** Closing Report Id */
+            closing_report_id?: string | null;
+            /** Report Date */
+            report_date?: string | null;
+            /** Item Count */
+            item_count?: number | null;
+            /** Revision Id */
+            revision_id?: number | null;
+            /** Body Bytes */
+            body_bytes: number;
         };
         /** ClosingReportDetail */
         ClosingReportDetail: {
@@ -3919,6 +4081,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClosingReportDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_closing_messages_api_closing_messages_get: {
+        parameters: {
+            query?: {
+                status?: ("baru" | "revisi" | "revisi_lama" | "duplikat" | "ditolak") | null;
+                /** @description Cari messageId atau kode outlet */
+                q?: string | null;
+                /** @description Tanggal diterima awal (WIB, inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal diterima akhir (WIB, inklusif) */
+                end_date?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMessageListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_closing_message_api_closing_messages__log_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMessageDetailResponse"];
                 };
             };
             /** @description Validation Error */

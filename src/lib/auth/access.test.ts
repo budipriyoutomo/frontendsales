@@ -65,6 +65,9 @@ describe("bolehMasukHalaman (3.3, 3.9)", () => {
     // "/closing-menu" tidak boleh lolos lewat aturan "/closing".
     expect(bolehMasukHalaman("manager", "/closing-menu")).toBe(false);
     expect(bolehMasukHalaman("outlet", "/closing-menu")).toBe(false);
+    expect(bolehMasukHalaman("admin", "/closing-pesan")).toBe(true);
+    expect(bolehMasukHalaman("manager", "/closing-pesan")).toBe(false);
+    expect(bolehMasukHalaman("outlet", "/closing-pesan")).toBe(false);
   });
 
   it("mengizinkan admin ke mana saja", () => {

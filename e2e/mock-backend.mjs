@@ -202,6 +202,54 @@ const menuTampil = (m) => ({
  * sama dijumlah — closing = Σ (sold + adjustment + compensation) × pengali,
  * selisih = qty POS − closing.
  */
+/** Log pesan RabbitMQ (`/api/closing-messages`): satu diterima, satu ditolak. */
+const PESAN_CLOSING = [
+  {
+    id: 2,
+    received_at: "2026-09-12T15:20:00",
+    status: "ditolak",
+    reason: "gagal validasi",
+    warnings: null,
+    message_id: "pesan-rusak-001",
+    outlet_code: "OUTLET_002",
+    closing_report_id: null,
+    report_date: null,
+    item_count: null,
+    revision_id: null,
+    body_bytes: 180,
+    errors: [
+      { type: "literal_error", loc: ["version"], msg: "Input should be 1" },
+    ],
+    payload: {
+      event: "closingreport.submitted",
+      version: 2,
+      messageId: "pesan-rusak-001",
+    },
+    body_text: null,
+  },
+  {
+    id: 1,
+    received_at: "2026-09-12T15:15:02",
+    status: "baru",
+    reason: null,
+    warnings: ["outlet belum terdaftar di api_keys"],
+    message_id: "pesan-baik-001",
+    outlet_code: "OUTLET_001",
+    closing_report_id: null,
+    report_date: TANGGAL_CLOSING,
+    item_count: 2,
+    revision_id: 1,
+    body_bytes: 640,
+    errors: null,
+    payload: {
+      event: "closingreport.submitted",
+      version: 1,
+      messageId: "pesan-baik-001",
+    },
+    body_text: null,
+  },
+];
+
 function perbandingan(outlet) {
   const baris = [];
   for (const o of Object.keys(CLOSING).sort()) {
@@ -444,7 +492,8 @@ const server = createServer(async (req, res) => {
     path.startsWith("/api/users") ||
     path.startsWith("/api/product-groups") ||
     path.startsWith("/api/product-menus") ||
-    path.startsWith("/api/closing-menus");
+    path.startsWith("/api/closing-menus") ||
+    path.startsWith("/api/closing-messages");
   if (butuhAdmin && user.role !== "admin") {
     return tolak(res, 403, "Akses ditolak");
   }
@@ -995,6 +1044,47 @@ const server = createServer(async (req, res) => {
       },
     ];
     return json(res, 200, bungkus({ ...ringkas, items, revisions }));
+  }
+
+  if (path === "/api/closing-messages" && method === "GET") {
+    const status = url.searchParams.get("status");
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const cocokCari = PESAN_CLOSING.filter(
+      (p) =>
+        !q ||
+        (p.message_id ?? "").toLowerCase().includes(q) ||
+        (p.outlet_code ?? "").toLowerCase().includes(q),
+    );
+    const counts = {
+      baru: 0,
+      revisi: 0,
+      revisi_lama: 0,
+      duplikat: 0,
+      ditolak: 0,
+    };
+    for (const p of cocokCari) counts[p.status] += 1;
+    const data = cocokCari
+      .filter((p) => !status || p.status === status)
+      // Daftar tanpa payload / error, sama dengan backend.
+      .map((p) => {
+        const ringkas = { ...p };
+        delete ringkas.errors;
+        delete ringkas.payload;
+        delete ringkas.body_text;
+        return ringkas;
+      });
+    return json(res, 200, {
+      ...bungkus(data),
+      pagination: { limit: 50, offset: 0, total: data.length, has_more: false },
+      counts,
+    });
+  }
+
+  const detailPesan = /^\/api\/closing-messages\/(\d+)$/.exec(path);
+  if (detailPesan && method === "GET") {
+    const pesan = PESAN_CLOSING.find((p) => p.id === Number(detailPesan[1]));
+    if (!pesan) return tolak(res, 404, "Pesan tidak ditemukan");
+    return json(res, 200, bungkus(pesan));
   }
 
   return tolak(res, 404, `Tidak ada rute ${method} ${path}`);

@@ -18,6 +18,7 @@ export type NavItem = {
     | "sync"
     | "closing"
     | "mapping"
+    | "pesan"
     | "kunci"
     | "group"
     | "brand"
@@ -73,6 +74,14 @@ export const NAV: readonly NavItem[] = [
     href: "/closing-menu",
     label: "Mapping Closing",
     icon: "mapping",
+    roles: ["admin"],
+  },
+  {
+    // Payload mentah semua outlet, termasuk pesan yang ditolak — hanya admin,
+    // sama seperti backend /api/closing-messages.
+    href: "/closing-pesan",
+    label: "Pesan RabbitMQ",
+    icon: "pesan",
     roles: ["admin"],
   },
   {

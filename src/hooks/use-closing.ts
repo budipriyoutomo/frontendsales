@@ -2,10 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/browser";
+import type { StatusPesan } from "@/lib/closing";
 import type { Filter } from "@/lib/filter";
 import type {
   ClosingComparisonRow,
   ClosingMenu,
+  ClosingMessageCounts,
+  ClosingMessageDetail,
+  ClosingMessageSummary,
   ClosingReportDetail,
   ClosingReportSummary,
 } from "@/types/domain";
@@ -75,5 +79,47 @@ export function useClosingMenus(status: StatusMenu, q: string) {
       api.request<ClosingMenu[]>("/api/closing-menus", {
         query: { status, q: q || undefined },
       }),
+  });
+}
+
+export type FilterPesan = {
+  status?: StatusPesan;
+  q?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+export function useClosingMessages(filter: FilterPesan, offset: number) {
+  return useQuery({
+    queryKey: ["closing-messages", filter, offset],
+    placeholderData: (sebelumnya) => sebelumnya,
+    queryFn: async () => {
+      const hasil = await api.requestWithMeta<ClosingMessageSummary[]>(
+        "/api/closing-messages",
+        {
+          query: {
+            status: filter.status,
+            q: filter.q || undefined,
+            start_date: filter.start_date || undefined,
+            end_date: filter.end_date || undefined,
+            limit: LIMIT_LAPORAN,
+            offset,
+          },
+        },
+      );
+      return {
+        ...hasil,
+        counts: (hasil.body as { counts?: ClosingMessageCounts }).counts,
+      };
+    },
+  });
+}
+
+export function useClosingMessage(id: number | null) {
+  return useQuery({
+    queryKey: ["closing-message", id],
+    enabled: id !== null,
+    queryFn: () =>
+      api.request<ClosingMessageDetail>(`/api/closing-messages/${id}`),
   });
 }

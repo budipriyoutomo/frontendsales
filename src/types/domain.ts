@@ -33,3 +33,6 @@ export type ClosingMenuProduct = S["ClosingMenuProductResponse"];
 export type ClosingReportSummary = S["ClosingReportSummary"];
 export type ClosingReportDetail = S["ClosingReportDetail"];
 export type ClosingComparisonRow = S["ClosingComparisonRow"];
+export type ClosingMessageSummary = S["ClosingMessageSummary"];
+export type ClosingMessageDetail = S["ClosingMessageDetail"];
+export type ClosingMessageCounts = S["ClosingMessageCounts"];
