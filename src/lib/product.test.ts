@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  bacaHarga,
   normalisasiKodeProduk,
-  validasiHarga,
   validasiKodeProduk,
   validasiNamaProduk,
   validasiTeksOpsional,
@@ -19,10 +17,17 @@ describe("normalisasiKodeProduk", () => {
 });
 
 describe("validasi produk", () => {
-  it("kode wajib dan maksimal 50 karakter setelah dinormalisasi", () => {
-    expect(validasiKodeProduk("   ")).toMatch(/wajib/);
+  it("ProductID wajib dan maksimal 50 karakter setelah dinormalisasi", () => {
+    expect(validasiKodeProduk("   ")).toBe("ProductID wajib diisi.");
     expect(validasiKodeProduk("X".repeat(51))).toMatch(/maksimal 50/);
     expect(validasiKodeProduk(` ${"X".repeat(50)} `)).toBeNull();
+  });
+
+  it("Product Code memakai aturan yang sama dengan labelnya sendiri", () => {
+    expect(validasiKodeProduk("", "Product Code")).toBe(
+      "Product Code wajib diisi.",
+    );
+    expect(validasiKodeProduk("sku-1", "Product Code")).toBeNull();
   });
 
   it("nama wajib", () => {
@@ -31,28 +36,9 @@ describe("validasi produk", () => {
   });
 
   it("teks opsional boleh kosong tapi dibatasi panjangnya", () => {
-    expect(validasiTeksOpsional("", "Satuan", 20)).toBeNull();
-    expect(validasiTeksOpsional("x".repeat(21), "Satuan", 20)).toMatch(
-      /Satuan maksimal 20/,
+    expect(validasiTeksOpsional("", "Subkategori", 100)).toBeNull();
+    expect(validasiTeksOpsional("x".repeat(101), "Subkategori", 100)).toMatch(
+      /Subkategori maksimal 100/,
     );
   });
-});
-
-describe("bacaHarga", () => {
-  it.each([
-    ["", 0],
-    ["25000", 25000],
-    [" 25000 ", 25000],
-    ["0", 0],
-  ])("%j → %j", (teks, hasil) => {
-    expect(bacaHarga(teks)).toBe(hasil);
-  });
-
-  it.each(["-1", "25.000", "25,000", "25000.5", "1e3", "abc"])(
-    "menolak %j",
-    (teks) => {
-      expect(bacaHarga(teks)).toBeNull();
-      expect(validasiHarga(teks)).not.toBeNull();
-    },
-  );
 });

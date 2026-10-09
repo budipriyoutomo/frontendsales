@@ -37,31 +37,28 @@ import {
   KeadaanGagal,
   KeadaanKosong,
 } from "@/components/dashboard/states";
+import { ProductImportDialog } from "@/components/admin/product-import-dialog";
 import { ProductPosMappingDialog } from "@/components/admin/product-pos-mapping-dialog";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
-import { formatRupiah } from "@/lib/format";
 import {
   PANJANG_KATEGORI_MAKSIMAL,
-  PANJANG_SATUAN_MAKSIMAL,
-  bacaHarga,
+  PANJANG_SUBKATEGORI_MAKSIMAL,
   normalisasiKodeProduk,
-  validasiHarga,
   validasiKodeProduk,
   validasiNamaProduk,
   validasiTeksOpsional,
 } from "@/lib/product";
 import type { Brand, Product } from "@/types/domain";
 
-/** Nilai sentinel — `Select` tidak menerima item bernilai string kosong. */
-const TANPA_BRAND = "__tanpa__";
-
+/** Wajib: ProductID, Product Code, nama, brand. Sisanya opsional. */
 type IsiForm = {
   code: string;
+  product_code: string;
   name: string;
   category: string;
-  unit: string;
-  price: string;
+  subcategory: string;
+  /** id brand sebagai string; "" = belum dipilih. */
   brand: string;
   is_active: boolean;
 };
@@ -73,22 +70,24 @@ type Sasaran = "baru" | Product | null;
 
 const FORM_KOSONG: IsiForm = {
   code: "",
+  product_code: "",
   name: "",
   category: "",
-  unit: "",
-  price: "",
-  brand: TANPA_BRAND,
+  subcategory: "",
+  brand: "",
   is_active: true,
 };
 
 function dariProduk(p: Product): IsiForm {
   return {
     code: p.code,
+    // Produk lama (sebelum migrasi 015) belum punya Product Code / brand —
+    // dibiarkan kosong supaya admin wajib melengkapinya saat mengubah.
+    product_code: p.product_code ?? "",
     name: p.name,
     category: p.category ?? "",
-    unit: p.unit ?? "",
-    price: String(p.price),
-    brand: p.brand ? String(p.brand.id) : TANPA_BRAND,
+    subcategory: p.subcategory ?? "",
+    brand: p.brand ? String(p.brand.id) : "",
     is_active: p.is_active,
   };
 }
@@ -96,14 +95,19 @@ function dariProduk(p: Product): IsiForm {
 function validasi(isi: IsiForm, baru: boolean): Galat {
   return {
     code: baru ? validasiKodeProduk(isi.code) : null,
+    product_code: validasiKodeProduk(isi.product_code, "Product Code"),
     name: validasiNamaProduk(isi.name),
+    brand: isi.brand ? null : "Brand wajib dipilih.",
     category: validasiTeksOpsional(
       isi.category,
       "Kategori",
       PANJANG_KATEGORI_MAKSIMAL,
     ),
-    unit: validasiTeksOpsional(isi.unit, "Satuan", PANJANG_SATUAN_MAKSIMAL),
-    price: validasiHarga(isi.price),
+    subcategory: validasiTeksOpsional(
+      isi.subcategory,
+      "Subkategori",
+      PANJANG_SUBKATEGORI_MAKSIMAL,
+    ),
   };
 }
 
@@ -125,6 +129,15 @@ function Status({ aktif }: { aktif: boolean }) {
   );
 }
 
+/** Field wajib yang masih kosong di produk lama (sebelum migrasi 015). */
+function BelumDiisi() {
+  return (
+    <span className="text-sm text-amber-800 dark:text-amber-400">
+      Belum diisi
+    </span>
+  );
+}
+
 function PesanGalat({ id, pesan }: { id: string; pesan?: string | null }) {
   return pesan ? (
     <p id={`${id}-galat`} role="alert" className="text-destructive text-xs">
@@ -136,15 +149,22 @@ function PesanGalat({ id, pesan }: { id: string; pesan?: string | null }) {
 function cocok(p: Product, kata: string) {
   if (!kata) return true;
   const k = kata.toUpperCase();
-  return [p.code, p.name, p.category, p.brand?.code, p.brand?.name].some((v) =>
-    v?.toUpperCase().includes(k),
-  );
+  return [
+    p.code,
+    p.product_code,
+    p.name,
+    p.category,
+    p.subcategory,
+    p.brand?.code,
+    p.brand?.name,
+  ].some((v) => v?.toUpperCase().includes(k));
 }
 
 export function ProductsView() {
   const [cari, setCari] = useState("");
   const [sasaran, setSasaran] = useState<Sasaran>(null);
   const [mappingId, setMappingId] = useState<number | null>(null);
+  const [imporBuka, setImporBuka] = useState(false);
 
   const products = useQuery({
     queryKey: ["products"],
@@ -164,8 +184,8 @@ export function ProductsView() {
           sama dikenali sebagai satu produk.
         </p>
         <p className="text-muted-foreground text-sm">
-          Produk tidak bisa dihapus dan kodenya tidak bisa diganti. Produk yang
-          tidak dipakai lagi cukup dinonaktifkan.
+          Produk tidak bisa dihapus dan ProductID-nya tidak bisa diganti. Produk
+          yang tidak dipakai lagi cukup dinonaktifkan.
         </p>
       </div>
 
@@ -177,11 +197,16 @@ export function ProductsView() {
             className="w-72 max-w-full"
             value={cari}
             onChange={(e) => setCari(e.target.value)}
-            placeholder="Kode, nama, kategori, atau brand"
+            placeholder="ProductID, Product Code, nama, kategori, atau brand"
             autoComplete="off"
           />
         </div>
-        <Button onClick={() => setSasaran("baru")}>Tambah produk</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setImporBuka(true)}>
+            Ambil dari transaksi
+          </Button>
+          <Button onClick={() => setSasaran("baru")}>Tambah produk</Button>
+        </div>
       </div>
 
       <Card>
@@ -196,7 +221,7 @@ export function ProductsView() {
           ) : semua.length === 0 ? (
             <KeadaanKosong
               judul="Belum ada produk"
-              keterangan="Tambahkan produk pertama, lalu petakan ProductID POS tiap outlet ke produk itu."
+              keterangan="Tambahkan produk pertama, atau ambil dari transaksi POS yang sudah masuk."
             />
           ) : tampil.length === 0 ? (
             <KeadaanKosong
@@ -208,11 +233,11 @@ export function ProductsView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Kode</TableHead>
+                    <TableHead>ProductID</TableHead>
+                    <TableHead>Product Code</TableHead>
                     <TableHead>Nama</TableHead>
                     <TableHead>Kategori</TableHead>
-                    <TableHead>Satuan</TableHead>
-                    <TableHead className="text-right">Harga</TableHead>
+                    <TableHead>Subkategori</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>ProductID POS</TableHead>
                     <TableHead>Status</TableHead>
@@ -229,17 +254,17 @@ export function ProductsView() {
                         <TableCell className="font-mono font-medium">
                           {p.code}
                         </TableCell>
+                        <TableCell className="font-mono">
+                          {p.product_code ?? <BelumDiisi />}
+                        </TableCell>
                         <TableCell>{p.name}</TableCell>
                         <TableCell>{p.category ?? "—"}</TableCell>
-                        <TableCell>{p.unit ?? "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatRupiah(p.price)}
-                        </TableCell>
+                        <TableCell>{p.subcategory ?? "—"}</TableCell>
                         <TableCell>
                           {p.brand ? (
                             <span className="font-mono">{p.brand.code}</span>
                           ) : (
-                            "—"
+                            <BelumDiisi />
                           )}
                         </TableCell>
                         <TableCell>
@@ -296,6 +321,10 @@ export function ProductsView() {
         productId={mappingId}
         onClose={() => setMappingId(null)}
       />
+      <ProductImportDialog
+        open={imporBuka}
+        onClose={() => setImporBuka(false)}
+      />
     </div>
   );
 }
@@ -338,9 +367,17 @@ function ProductFormDialog({
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 409) {
-        setGalat({
-          code: "Kode ini sudah terdaftar. Aktifkan dari daftar kalau sedang nonaktif.",
-        });
+        // Backend membedakan bentrok Product Code dari ProductID lewat pesannya.
+        setGalat(
+          /product code/i.test(error.message)
+            ? {
+                product_code:
+                  "Product Code ini sudah dipakai produk lain, termasuk yang nonaktif.",
+              }
+            : {
+                code: "ProductID ini sudah terdaftar. Aktifkan dari daftar kalau sedang nonaktif.",
+              },
+        );
         return;
       }
       if (error instanceof ApiError && error.status === 422) {
@@ -348,10 +385,10 @@ function ProductFormDialog({
         if (f) {
           setGalat({
             code: f.code ?? null,
+            product_code: f.product_code ?? null,
             name: f.name ?? null,
             category: f.category ?? null,
-            unit: f.unit ?? null,
-            price: f.price ?? null,
+            subcategory: f.subcategory ?? null,
             brand: f.brand_id ?? null,
           });
         } else {
@@ -377,31 +414,22 @@ function ProductFormDialog({
     setGalat(masalah);
     if (Object.values(masalah).some(Boolean)) return;
 
-    const brand_id = isi.brand === TANPA_BRAND ? null : Number(isi.brand);
     const umum = {
+      product_code: isi.product_code,
       name: isi.name,
+      brand_id: Number(isi.brand),
       category: isi.category.trim() || null,
-      unit: isi.unit.trim() || null,
-      brand_id,
+      subcategory: isi.subcategory.trim() || null,
       is_active: isi.is_active,
     };
 
-    if (baru) {
-      simpan.mutate({ code: isi.code, ...umum, price: bacaHarga(isi.price) });
-      return;
-    }
-    // Harga dikirim hanya kalau diubah: harga berdesimal yang diisi lewat API
-    // tidak ikut terpotong hanya karena nama yang disunting.
-    simpan.mutate(
-      isi.price.trim() === awal.price
-        ? umum
-        : { ...umum, price: bacaHarga(isi.price) },
-    );
+    simpan.mutate(baru ? { code: isi.code, ...umum } : umum);
   }
 
   const semuaBrand = brands.data ?? [];
   const brandDipilih = semuaBrand.find((b) => String(b.id) === isi.brand);
   const pratinjau = baru ? normalisasiKodeProduk(isi.code) : "";
+  const pratinjauProductCode = normalisasiKodeProduk(isi.product_code);
 
   const atribut = (id: string, k: keyof IsiForm) => ({
     id,
@@ -430,14 +458,15 @@ function ProductFormDialog({
             </DialogTitle>
             <DialogDescription>
               {produk
-                ? "Kode tidak bisa diganti. Menonaktifkan produk tidak melepas mapping POS-nya."
-                : "Kode disimpan dalam huruf besar dan tidak bisa diganti setelah dibuat."}
+                ? "ProductID tidak bisa diganti. Menonaktifkan produk tidak melepas mapping POS-nya."
+                : "ProductID dan Product Code disimpan dalam huruf besar. ProductID tidak bisa diganti setelah dibuat."}{" "}
+              Kolom bertanda * wajib diisi.
             </DialogDescription>
           </DialogHeader>
 
           {baru ? (
             <div className="space-y-1.5">
-              <Label htmlFor="produk_code">Kode</Label>
+              <Label htmlFor="produk_code">ProductID *</Label>
               <Input
                 {...atribut("produk_code", "code")}
                 aria-describedby={
@@ -470,7 +499,41 @@ function ProductFormDialog({
           ) : null}
 
           <div className="space-y-1.5">
-            <Label htmlFor="produk_name">Nama produk</Label>
+            <Label htmlFor="produk_product_code">Product Code *</Label>
+            <Input
+              {...atribut("produk_product_code", "product_code")}
+              aria-describedby={
+                galat.product_code
+                  ? "produk_product_code-galat"
+                  : pratinjauProductCode &&
+                      pratinjauProductCode !== isi.product_code
+                    ? "produk_product_code-pratinjau"
+                    : undefined
+              }
+              value={isi.product_code}
+              onChange={(e) => ubahField("product_code", e.target.value)}
+              placeholder="SKU-001"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {galat.product_code ? (
+              <PesanGalat id="produk_product_code" pesan={galat.product_code} />
+            ) : pratinjauProductCode &&
+              pratinjauProductCode !== isi.product_code ? (
+              <p
+                id="produk_product_code-pratinjau"
+                className="text-muted-foreground text-xs"
+              >
+                Akan tersimpan sebagai{" "}
+                <code className="text-foreground font-mono font-semibold">
+                  {pratinjauProductCode}
+                </code>
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="produk_name">Nama produk *</Label>
             <Input
               {...atribut("produk_name", "name")}
               value={isi.name}
@@ -479,6 +542,42 @@ function ProductFormDialog({
               autoComplete="off"
             />
             <PesanGalat id="produk_name" pesan={galat.name} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="produk_brand">Brand *</Label>
+            <Select
+              value={isi.brand || undefined}
+              onValueChange={(v) => ubahField("brand", v)}
+            >
+              <SelectTrigger
+                id="produk_brand"
+                className="w-full"
+                aria-invalid={galat.brand ? true : undefined}
+                aria-describedby={
+                  galat.brand ? "produk_brand-galat" : undefined
+                }
+              >
+                <SelectValue placeholder="Pilih brand" />
+              </SelectTrigger>
+              <SelectContent>
+                {semuaBrand
+                  .filter((b) => b.is_active)
+                  .map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name} ({b.code})
+                    </SelectItem>
+                  ))}
+                {/* Brand nonaktif yang masih dipegang produk tetap
+                    ditampilkan, supaya nilainya tidak tampak kosong. */}
+                {brandDipilih && !brandDipilih.is_active ? (
+                  <SelectItem value={String(brandDipilih.id)} disabled>
+                    {brandDipilih.name} ({brandDipilih.code}) — nonaktif
+                  </SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+            <PesanGalat id="produk_brand" pesan={galat.brand} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -494,63 +593,15 @@ function ProductFormDialog({
               <PesanGalat id="produk_category" pesan={galat.category} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="produk_unit">Satuan</Label>
+              <Label htmlFor="produk_subcategory">Subkategori</Label>
               <Input
-                {...atribut("produk_unit", "unit")}
-                value={isi.unit}
-                onChange={(e) => ubahField("unit", e.target.value)}
-                placeholder="pcs, porsi, …"
+                {...atribut("produk_subcategory", "subcategory")}
+                value={isi.subcategory}
+                onChange={(e) => ubahField("subcategory", e.target.value)}
+                placeholder="Opsional"
                 autoComplete="off"
               />
-              <PesanGalat id="produk_unit" pesan={galat.unit} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="produk_price">Harga (Rp)</Label>
-              <Input
-                {...atribut("produk_price", "price")}
-                inputMode="numeric"
-                value={isi.price}
-                onChange={(e) => ubahField("price", e.target.value)}
-                placeholder="0"
-                autoComplete="off"
-              />
-              <PesanGalat id="produk_price" pesan={galat.price} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="produk_brand">Brand</Label>
-              <Select
-                value={isi.brand}
-                onValueChange={(v) => ubahField("brand", v)}
-              >
-                <SelectTrigger
-                  id="produk_brand"
-                  className="w-full"
-                  aria-invalid={galat.brand ? true : undefined}
-                  aria-describedby={
-                    galat.brand ? "produk_brand-galat" : undefined
-                  }
-                >
-                  <SelectValue placeholder="Tanpa brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TANPA_BRAND}>Tanpa brand</SelectItem>
-                  {semuaBrand
-                    .filter((b) => b.is_active)
-                    .map((b) => (
-                      <SelectItem key={b.id} value={String(b.id)}>
-                        {b.name} ({b.code})
-                      </SelectItem>
-                    ))}
-                  {/* Brand nonaktif yang masih dipegang produk tetap
-                      ditampilkan, supaya nilainya tidak tampak kosong. */}
-                  {brandDipilih && !brandDipilih.is_active ? (
-                    <SelectItem value={String(brandDipilih.id)} disabled>
-                      {brandDipilih.name} ({brandDipilih.code}) — nonaktif
-                    </SelectItem>
-                  ) : null}
-                </SelectContent>
-              </Select>
-              <PesanGalat id="produk_brand" pesan={galat.brand} />
+              <PesanGalat id="produk_subcategory" pesan={galat.subcategory} />
             </div>
           </div>
 

@@ -813,6 +813,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/import-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Import Candidates
+         * @description Produk POS per (brand, ProductID) yang masih punya outlet belum dipetakan.
+         *
+         *     Hanya outlet yang sudah dipetakan ke brand aktif yang ikut.
+         */
+        get: operations["list_import_candidates_api_products_import_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Products
+         * @description Buat produk `BRAND-ProductID` (atau tambah outlet ke produk itu) dari penjualan.
+         *
+         *     Item yang tidak bisa diimpor dilewati dengan alasannya; yang lain tetap tersimpan.
+         */
+        post: operations["import_products_api_products_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products/{product_id}": {
         parameters: {
             query?: never;
@@ -829,7 +873,7 @@ export interface paths {
         head?: never;
         /**
          * Update Product
-         * @description Ubah field yang dikirim. `null` untuk category / unit / brand_id mengosongkannya.
+         * @description Ubah field yang dikirim. `null` untuk category / subcategory mengosongkannya.
          */
         patch: operations["update_product_api_products__product_id__patch"];
         trace?: never;
@@ -1695,24 +1739,23 @@ export interface components {
         };
         /**
          * CreateProductRequest
-         * @description Kode dinormalisasi oleh service: `p-001 ` tersimpan sebagai `P-001`.
+         * @description Wajib: ProductID (`code`), Product Code, nama, brand.
+         *
+         *     `code` & `product_code` dinormalisasi oleh service: `p-001 ` → `P-001`.
          */
         CreateProductRequest: {
             /** Code */
             code: string;
+            /** Product Code */
+            product_code: string;
             /** Name */
             name: string;
+            /** Brand Id */
+            brand_id: number;
             /** Category */
             category?: string | null;
-            /** Unit */
-            unit?: string | null;
-            /**
-             * Price
-             * @default 0
-             */
-            price: number | string;
-            /** Brand Id */
-            brand_id?: number | null;
+            /** Subcategory */
+            subcategory?: string | null;
             /**
              * Is Active
              * @default true
@@ -1761,6 +1804,99 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ImportCandidateListResponse */
+        ImportCandidateListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ImportCandidateResponse"][];
+        };
+        /**
+         * ImportCandidateResponse
+         * @description Satu (brand, ProductID POS) yang masih punya outlet belum dipetakan.
+         */
+        ImportCandidateResponse: {
+            /** Brand Id */
+            brand_id: number;
+            /** Brand Code */
+            brand_code: string;
+            /** Brand Name */
+            brand_name: string;
+            /** Pos Product Id */
+            pos_product_id: number;
+            /** Pos Product Name */
+            pos_product_name?: string | null;
+            /** Pos Product Group */
+            pos_product_group?: string | null;
+            /** Pos Product Dept */
+            pos_product_dept?: string | null;
+            /** Last Sale Date */
+            last_sale_date?: string | null;
+            /** Outlet Codes */
+            outlet_codes: string[];
+            /** Unmapped Outlet Codes */
+            unmapped_outlet_codes: string[];
+            /** Proposed Code */
+            proposed_code: string;
+            /** Status */
+            status: string;
+            /** Existing Product Id */
+            existing_product_id?: number | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ImportItem */
+        ImportItem: {
+            /** Brand Id */
+            brand_id: number;
+            /** Pos Product Id */
+            pos_product_id: number;
+        };
+        /** ImportProductsRequest */
+        ImportProductsRequest: {
+            /** Items */
+            items: components["schemas"]["ImportItem"][];
+        };
+        /** ImportProductsResponse */
+        ImportProductsResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ImportSummary"];
+        };
+        /** ImportResult */
+        ImportResult: {
+            /** Brand Id */
+            brand_id: number;
+            /** Pos Product Id */
+            pos_product_id: number;
+            /** Status */
+            status: string;
+            /** Product Id */
+            product_id?: number | null;
+            /** Code */
+            code?: string | null;
+            /** Mapped Outlets */
+            mapped_outlets?: string[];
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ImportSummary */
+        ImportSummary: {
+            /** Created */
+            created: number;
+            /** Added */
+            added: number;
+            /** Skipped */
+            skipped: number;
+            /** Results */
+            results: components["schemas"]["ImportResult"][];
         };
         /** LoginRequest */
         LoginRequest: {
@@ -2098,14 +2234,14 @@ export interface components {
             id: number;
             /** Code */
             code: string;
+            /** Product Code */
+            product_code?: string | null;
             /** Name */
             name: string;
             /** Category */
             category?: string | null;
-            /** Unit */
-            unit?: string | null;
-            /** Price */
-            price: number;
+            /** Subcategory */
+            subcategory?: string | null;
             brand?: components["schemas"]["ProductBrand"] | null;
             /** Is Active */
             is_active: boolean;
@@ -2700,17 +2836,17 @@ export interface components {
         };
         /**
          * UpdateProductRequest
-         * @description Hanya field yang dikirim yang diubah. Kode sengaja tidak bisa diubah.
+         * @description Hanya field yang dikirim yang diubah. ProductID (`code`) tidak bisa diubah.
          */
         UpdateProductRequest: {
+            /** Product Code */
+            product_code?: string | null;
             /** Name */
             name?: string | null;
             /** Category */
             category?: string | null;
-            /** Unit */
-            unit?: string | null;
-            /** Price */
-            price?: number | string | null;
+            /** Subcategory */
+            subcategory?: string | null;
             /** Brand Id */
             brand_id?: number | null;
             /** Is Active */
@@ -4210,6 +4346,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PosCandidateListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_import_candidates_api_products_import_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Batasi ke satu brand */
+                brand_id?: number | null;
+                /** @description Cari nama produk POS atau ProductID persis */
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCandidateListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_products_api_products_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportProductsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportProductsResponse"];
                 };
             };
             /** @description Validation Error */

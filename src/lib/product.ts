@@ -4,25 +4,31 @@
  * Sama seperti brand: backend yang memutuskan bentuk akhir, fungsi di sini
  * hanya meniru `normalize_product_code` supaya pratinjau "akan tersimpan
  * sebagai …" tidak menjanjikan sesuatu yang berbeda.
+ *
+ * Wajib: ProductID (`code`), Product Code, nama, dan brand. Sisanya opsional.
  */
 
 /** Sama dengan konstanta `MAX_*` di `product_service` backend. */
 export const PANJANG_KODE_PRODUK_MAKSIMAL = 50;
 export const PANJANG_NAMA_PRODUK_MAKSIMAL = 255;
 export const PANJANG_KATEGORI_MAKSIMAL = 100;
-export const PANJANG_SATUAN_MAKSIMAL = 20;
+export const PANJANG_SUBKATEGORI_MAKSIMAL = 100;
 
 /** Tanpa SPASI di ujung, huruf besar — sama dengan `strip(" ").upper()`. */
 export function normalisasiKodeProduk(kode: string): string {
   return kode.replace(/^ +| +$/g, "").toUpperCase();
 }
 
-export function validasiKodeProduk(kode: string): string | null {
+/** ProductID dan Product Code memakai aturan yang sama; `label` untuk pesannya. */
+export function validasiKodeProduk(
+  kode: string,
+  label = "ProductID",
+): string | null {
   const normal = normalisasiKodeProduk(kode);
 
-  if (normal === "") return "Kode produk wajib diisi.";
+  if (normal === "") return `${label} wajib diisi.`;
   if (normal.length > PANJANG_KODE_PRODUK_MAKSIMAL) {
-    return `Kode produk maksimal ${PANJANG_KODE_PRODUK_MAKSIMAL} karakter.`;
+    return `${label} maksimal ${PANJANG_KODE_PRODUK_MAKSIMAL} karakter.`;
   }
   return null;
 }
@@ -46,22 +52,4 @@ export function validasiTeksOpsional(
     return `${label} maksimal ${maksimal} karakter.`;
   }
   return null;
-}
-
-/**
- * Harga rupiah dari input: kosong = 0. Hanya bilangan bulat tanpa pemisah —
- * "25.000" bisa berarti dua puluh lima ribu atau 25,000, jadi ditolak, bukan
- * ditebak. (Backend menerima desimal; dashboard tidak memerlukannya.)
- */
-export function bacaHarga(teks: string): number | null {
-  const bersih = teks.trim();
-  if (bersih === "") return 0;
-  if (!/^\d{1,14}$/.test(bersih)) return null;
-  return Number(bersih);
-}
-
-export function validasiHarga(teks: string): string | null {
-  return bacaHarga(teks) === null
-    ? "Harga harus bilangan bulat ≥ 0 tanpa titik atau koma (mis. 25000)."
-    : null;
 }

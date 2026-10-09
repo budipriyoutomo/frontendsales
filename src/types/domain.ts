@@ -39,3 +39,5 @@ export type ClosingMessageCounts = S["ClosingMessageCounts"];
 export type Product = S["ProductResponse"];
 export type ProductPosMapping = S["ProductPosMappingResponse"];
 export type PosCandidate = S["PosCandidateResponse"];
+export type ImportCandidate = S["ImportCandidateResponse"];
+export type ImportSummary = S["ImportSummary"];
