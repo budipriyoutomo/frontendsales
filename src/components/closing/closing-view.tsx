@@ -23,21 +23,12 @@ import {
   KeadaanKosong,
 } from "@/components/dashboard/states";
 import { ClosingDetailDialog } from "@/components/closing/closing-detail-dialog";
-import { ClosingStatusBadge } from "@/components/closing/closing-status-badge";
 import {
   LIMIT_LAPORAN,
   useClosingComparison,
   useClosingReports,
 } from "@/hooks/use-closing";
-import {
-  BERMASALAH,
-  STATUS_PERBANDINGAN,
-  formatSelisih,
-  hitungPerStatus,
-  saringPerbandingan,
-  type SaringStatus,
-  type StatusPerbandingan,
-} from "@/lib/closing";
+import { formatSelisih } from "@/lib/closing";
 import { bacaFilter, filterKeQuery, type Filter } from "@/lib/filter";
 import {
   formatAngka,
@@ -110,51 +101,27 @@ export function ClosingView({ role }: { role: Role }) {
   );
 }
 
-const URUTAN_STATUS: StatusPerbandingan[] = [
-  "selisih",
-  "tidak_ada_di_closing",
-  "belum_dipetakan",
-  "cocok",
-];
-
 function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
-  const [saring, setSaring] = useState<SaringStatus | undefined>();
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const query = useClosingComparison(filter, includeDeleted);
 
-  const semua = query.data ?? [];
-  const jumlah = hitungPerStatus(semua);
-  const bermasalah = semua.length - jumlah.cocok;
-  const baris = saringPerbandingan(semua, saring);
-
-  const toggle = (s: SaringStatus) =>
-    setSaring((now) => (now === s ? undefined : s));
+  const baris = query.data ?? [];
+  const belumDipetakan = baris.filter(
+    (b) => b.menu_id && !b.products?.length,
+  ).length;
+  // Produk POS terpetakan yang terjual tanpa satu pun menunya di Colorplate.
+  const hanyaPos = baris.filter((b) => !b.menu_id).length;
 
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="Saring per status"
-          >
-            <TombolSaring
-              label="Perlu dicek"
-              jumlah={bermasalah}
-              aktif={saring === BERMASALAH}
-              onClick={() => toggle(BERMASALAH)}
-            />
-            {URUTAN_STATUS.map((s) => (
-              <TombolSaring
-                key={s}
-                label={STATUS_PERBANDINGAN[s].label}
-                jumlah={jumlah[s]}
-                aktif={saring === s}
-                onClick={() => toggle(s)}
-              />
-            ))}
-          </div>
+          <p className="text-muted-foreground max-w-3xl text-sm">
+            Satu baris per menu Colorplate per outlet dan tanggal produksi. POS
+            = jumlah qty order detail pada outlet dan tanggal yang sama dari
+            produk POS yang dipetakan ke menu itu. Produk POS terpetakan yang
+            terjual tanpa menunya di Colorplate ikut tampil untuk konsolidasi.
+          </p>
 
           <div className="flex items-center gap-2">
             <Switch
@@ -166,17 +133,10 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
           </div>
         </div>
 
-        <p className="text-muted-foreground text-sm">
-          Dibandingkan per produk POS pada tanggal produksi yang sama. Closing =
-          Σ (terjual + adjustment + kompensasi) × pengali dari semua menu yang
-          dipetakan ke produk itu. Selisih = qty POS − (terjual + adjustment +
-          kompensasi) closing — rumus yang sama dengan sistem closing.
-        </p>
-
-        {jumlah.belum_dipetakan > 0 && role === "admin" ? (
+        {belumDipetakan > 0 && role === "admin" ? (
           <p className="text-sm">
-            {formatAngka(jumlah.belum_dipetakan)} baris belum bisa dibandingkan
-            karena menunya belum dipetakan ke ProductID POS.{" "}
+            {formatAngka(belumDipetakan)} menu belum punya angka POS karena
+            belum dipetakan ke ProductID POS.{" "}
             <Link
               href="/closing-menu"
               className="text-primary font-medium underline-offset-4 hover:underline"
@@ -186,19 +146,21 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
           </p>
         ) : null}
 
+        {hanyaPos > 0 ? (
+          <p className="text-sm">
+            {formatAngka(hanyaPos)} produk POS terjual tetapi tidak ada menunya
+            di Colorplate.
+          </p>
+        ) : null}
+
         {query.isPending ? (
           <KartuSkeleton baris={8} />
         ) : query.isError ? (
           <KeadaanGagal error={query.error} onCobaLagi={query.refetch} />
-        ) : semua.length === 0 ? (
+        ) : baris.length === 0 ? (
           <KeadaanKosong
             judul="Belum ada closing report"
             keterangan="Tidak ada closing pada rentang tanggal produksi ini."
-          />
-        ) : baris.length === 0 ? (
-          <KeadaanKosong
-            judul="Tidak ada baris"
-            keterangan="Tidak ada baris dengan status ini."
           />
         ) : (
           <div
@@ -210,53 +172,75 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tgl. produksi</TableHead>
-                  <TableHead>Outlet</TableHead>
-                  <TableHead>Produk POS</TableHead>
-                  <TableHead>Menu closing</TableHead>
-                  <TableHead className="text-right">Closing</TableHead>
-                  <TableHead className="text-right">POS</TableHead>
-                  <TableHead className="text-right">Selisih</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead rowSpan={2}>Tgl. produksi</TableHead>
+                  <TableHead rowSpan={2}>Outlet</TableHead>
+                  <TableHead rowSpan={2}>Menu</TableHead>
+                  <TableHead
+                    colSpan={4}
+                    scope="colgroup"
+                    className="border-l text-center"
+                  >
+                    Colorplate
+                  </TableHead>
+                  <TableHead
+                    colSpan={2}
+                    scope="colgroup"
+                    className="border-l text-center"
+                  >
+                    POS
+                  </TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead className="border-l text-right">Terjual</TableHead>
+                  <TableHead className="text-right">Waste</TableHead>
+                  <TableHead className="text-right">Adjustment</TableHead>
+                  <TableHead className="text-right">Kompensasi</TableHead>
+                  <TableHead className="border-l">Produk</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {baris.map((b) => (
                   <TableRow
-                    key={`${b.outlet_code}-${b.production_date}-${b.product_id ?? b.menus?.[0]?.menu_id}`}
+                    key={`${b.outlet_code}-${b.production_date}-${b.menu_id ?? `pos-${b.products?.[0]?.product_id}`}`}
                   >
                     <TableCell className="whitespace-nowrap">
                       {formatTanggal(b.production_date)}
                     </TableCell>
                     <TableCell className="font-mono">{b.outlet_code}</TableCell>
                     <TableCell>
-                      {b.product_id ? (
+                      {b.menu_id ? (
                         <>
-                          <div className="font-medium">
-                            {b.product_name ?? "—"}
-                          </div>
-                          <div className="text-muted-foreground font-mono text-xs">
-                            {b.product_id}
-                          </div>
+                          <div className="font-medium">{b.menu_name}</div>
+                          {b.menu_code ? (
+                            <div className="text-muted-foreground font-mono text-xs">
+                              {b.menu_code}
+                            </div>
+                          ) : null}
                         </>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-destructive text-sm">
+                          Tidak ada di Colorplate
+                        </span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <MenuPerbandingan menus={b.menus ?? []} />
+                    <TableCell className="border-l text-right tabular-nums">
+                      {formatAngka(b.sold)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatAngka(b.closing_qty)}
+                      {formatAngka(b.waste)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatAngka(b.pos_qty)}
+                      {formatSelisih(b.adjustment)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatAngka(b.compensation)}
+                    </TableCell>
+                    <TableCell className="border-l">
+                      <ProdukPos products={b.products ?? []} />
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {formatSelisih(b.selisih)}
-                    </TableCell>
-                    <TableCell>
-                      <ClosingStatusBadge status={b.status} />
+                      {b.pos_qty == null ? "—" : formatAngka(b.pos_qty)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -269,56 +253,27 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   );
 }
 
-function TombolSaring({
-  label,
-  jumlah,
-  aktif,
-  onClick,
+/** Produk POS yang dipetakan ke satu menu; qty-nya dijumlah di kolom POS. */
+function ProdukPos({
+  products,
 }: {
-  label: string;
-  jumlah: number;
-  aktif: boolean;
-  onClick: () => void;
+  products: NonNullable<ClosingComparisonRow["products"]>;
 }) {
-  return (
-    <Button
-      type="button"
-      size="sm"
-      variant={aktif ? "default" : "outline"}
-      aria-pressed={aktif}
-      onClick={onClick}
-    >
-      {label}
-      <span className="tabular-nums opacity-80">{formatAngka(jumlah)}</span>
-    </Button>
-  );
-}
-
-/** Menu closing yang membentuk angka closing satu baris produk. */
-function MenuPerbandingan({
-  menus,
-}: {
-  menus: NonNullable<ClosingComparisonRow["menus"]>;
-}) {
-  if (menus.length === 0) {
-    return <span className="text-muted-foreground text-sm">Tidak ada</span>;
+  if (products.length === 0) {
+    return (
+      <span className="text-sm text-amber-800 dark:text-amber-400">
+        Belum dipetakan
+      </span>
+    );
   }
   return (
     <ul className="space-y-1">
-      {menus.map((m) => (
-        <li key={m.menu_id}>
-          <div className="font-medium">
-            {m.menu_name}
-            {m.menu_code ? (
-              <span className="text-muted-foreground ml-1 font-mono text-xs">
-                {m.menu_code}
-              </span>
-            ) : null}
-          </div>
-          <div className="text-muted-foreground text-xs tabular-nums">
-            terjual {formatAngka(m.sold)} · adj {formatSelisih(m.adjustment)} ·
-            komp {formatAngka(m.compensation)}
-            {m.multiplier && m.multiplier !== 1 ? ` · × ${m.multiplier}` : ""}
+      {products.map((p) => (
+        <li key={p.product_id}>
+          <div className="font-medium">{p.product_name ?? "—"}</div>
+          <div className="text-muted-foreground font-mono text-xs">
+            {p.product_id}
+            {p.multiplier !== 1 ? ` · × ${p.multiplier}` : ""}
           </div>
         </li>
       ))}

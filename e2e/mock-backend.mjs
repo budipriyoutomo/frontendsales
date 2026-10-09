@@ -197,11 +197,6 @@ const menuTampil = (m) => ({
   is_mapped: m.products.some((p) => p.is_active),
 });
 
-/**
- * Meniru `compare_with_pos` per ProductID: menu yang dipetakan ke produk yang
- * sama dijumlah — closing = Σ (sold + adjustment + compensation) × pengali,
- * selisih = qty POS − closing.
- */
 /** Log pesan RabbitMQ (`/api/closing-messages`): satu diterima, satu ditolak. */
 const PESAN_CLOSING = [
   {
@@ -250,75 +245,76 @@ const PESAN_CLOSING = [
   },
 ];
 
+/**
+ * Meniru `compare_with_pos`: satu baris per menu colorplate; POS = Σ qty
+ * produk POS yang dipetakan ke menu itu (tanpa pengali), kosong kalau belum
+ * dipetakan. Produk terpetakan yang terjual tanpa menunya di colorplate jadi
+ * baris tanpa menu.
+ */
 function perbandingan(outlet) {
   const baris = [];
   for (const o of Object.keys(CLOSING).sort()) {
     if (outlet && o !== outlet) continue;
-    const item = CLOSING[o].map(
-      ([kode, sold, waste, adjustment, compensation]) => ({
-        menu: state.closingMenus.find((x) => x.menu_code === kode),
+    for (const [kode, sold, waste, adjustment, compensation] of CLOSING[o]) {
+      const menu = state.closingMenus.find((x) => x.menu_code === kode);
+      const products = menu.products
+        .filter((p) => p.is_active)
+        .map(({ product_id, product_name, multiplier }) => ({
+          product_id,
+          product_name,
+          multiplier,
+        }));
+      baris.push({
+        outlet_code: o,
+        production_date: TANGGAL_CLOSING,
+        menu_id: menu.menu_id,
+        menu_code: menu.menu_code,
+        menu_name: menu.menu_name,
         sold,
         waste,
         adjustment,
         compensation,
-      }),
-    );
-    const produk = new Map();
-    const belum = [];
-    for (const it of item) {
-      const aktif = it.menu.products.filter((p) => p.is_active);
-      if (aktif.length === 0) belum.push(it);
-      for (const p of aktif) {
-        if (!produk.has(p.product_id)) {
-          produk.set(p.product_id, { nama: p.product_name, menus: [] });
-        }
-        produk
-          .get(p.product_id)
-          .menus.push({ ...it, multiplier: p.multiplier });
-      }
-    }
-    const infoMenu = (it, multiplier) => ({
-      menu_id: it.menu.menu_id,
-      menu_code: it.menu.menu_code,
-      menu_name: it.menu.menu_name,
-      multiplier,
-      sold: it.sold,
-      waste: it.waste,
-      adjustment: it.adjustment,
-      compensation: it.compensation,
-    });
-    const total = (it) => it.sold + it.adjustment + it.compensation;
-    for (const [product_id, { nama, menus }] of [...produk].sort(
-      (a, b) => a[0] - b[0],
-    )) {
-      const closing_qty = menus.reduce(
-        (n, it) => n + total(it) * it.multiplier,
-        0,
-      );
-      const pos_qty = QTY_POS[o][product_id] ?? 0;
-      baris.push({
-        outlet_code: o,
-        production_date: TANGGAL_CLOSING,
-        product_id,
-        product_name: nama,
-        menus: menus.map((it) => infoMenu(it, it.multiplier)),
-        closing_qty,
-        pos_qty,
-        selisih: pos_qty - closing_qty,
-        status: pos_qty === closing_qty ? "cocok" : "selisih",
+        products,
+        pos_qty: products.length
+          ? products.reduce((n, p) => n + (QTY_POS[o][p.product_id] ?? 0), 0)
+          : null,
       });
     }
-    for (const it of belum) {
+    // Produk terpetakan yang terjual tanpa satu pun menunya di colorplate.
+    const tampil = new Set(
+      baris
+        .filter((b) => b.outlet_code === o)
+        .flatMap((b) => b.products.map((p) => p.product_id)),
+    );
+    const terpetakan = new Map();
+    for (const m of state.closingMenus) {
+      for (const p of m.products.filter((p) => p.is_active)) {
+        terpetakan.set(p.product_id, p.product_name);
+      }
+    }
+    for (const [pid, qty] of Object.entries(QTY_POS[o])) {
+      const product_id = Number(pid);
+      if (!qty || tampil.has(product_id) || !terpetakan.has(product_id)) {
+        continue;
+      }
       baris.push({
         outlet_code: o,
         production_date: TANGGAL_CLOSING,
-        product_id: null,
-        product_name: null,
-        menus: [infoMenu(it, null)],
-        closing_qty: total(it),
-        pos_qty: null,
-        selisih: null,
-        status: "belum_dipetakan",
+        menu_id: null,
+        menu_code: null,
+        menu_name: null,
+        sold: null,
+        waste: null,
+        adjustment: null,
+        compensation: null,
+        products: [
+          {
+            product_id,
+            product_name: terpetakan.get(product_id),
+            multiplier: 1,
+          },
+        ],
+        pos_qty: qty,
       });
     }
   }

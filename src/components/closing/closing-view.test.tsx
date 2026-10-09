@@ -18,31 +18,19 @@ vi.mock("next/navigation", () => ({
 
 const REPORT_ID = "6f1c2a9e-3b4d-4e5f-8a7b-9c0d1e2f3a4b";
 
-function menu(nama: string, lain = {}) {
+function baris(nama: string, lain = {}) {
   return {
+    outlet_code: "STTSM",
+    production_date: "2026-10-02",
     menu_id: `0a1b2c3d-4e5f-4a7b-8c9d-${nama.length.toString().padStart(12, "0")}`,
     menu_code: null,
     menu_name: nama,
-    multiplier: 1,
     sold: 5,
     waste: 1,
     adjustment: 0,
     compensation: 0,
-    ...lain,
-  };
-}
-
-function baris(produk: string | null, status: string, lain = {}) {
-  return {
-    outlet_code: "STTSM",
-    production_date: "2026-10-02",
-    product_id: produk ? 900000 + produk.length : null,
-    product_name: produk,
-    menus: [],
-    closing_qty: 5,
+    products: [{ product_id: 900001, product_name: "RED", multiplier: 1 }],
     pos_qty: 5,
-    selisih: 0,
-    status,
     ...lain,
   };
 }
@@ -67,35 +55,37 @@ beforeEach(() => {
       return HttpResponse.json({
         success: true,
         data: [
-          baris("RED", "cocok", {
-            menus: [
-              menu("Salmon Nigiri", { menu_code: "SU-001" }),
-              menu("Tuna Nigiri", { sold: 0, compensation: 0 }),
-            ],
+          baris("Salmon Nigiri", {
+            menu_code: "SU-001",
+            sold: 42,
+            waste: 3,
+            adjustment: -2,
+            compensation: 7,
+            pos_qty: 31,
           }),
-          baris("BLUE", "selisih", {
-            menus: [
-              menu("Ebi Nigiri", {
-                sold: 25,
-                adjustment: 1,
-                compensation: 1,
-                multiplier: 1,
-              }),
+          baris("Ebi Nigiri", {
+            products: [
+              { product_id: 900002, product_name: "BLUE", multiplier: 2 },
+              { product_id: 900003, product_name: "BLUE PROMO", multiplier: 1 },
             ],
-            closing_qty: 27,
             pos_qty: 16,
-            selisih: -11,
           }),
-          baris(null, "belum_dipetakan", {
-            menus: [menu("Menu Lama", { multiplier: null })],
-            pos_qty: null,
-            selisih: null,
-          }),
-          baris("GREEN", "tidak_ada_di_closing", {
-            closing_qty: null,
+          baris("Menu Lama", { products: [], pos_qty: null }),
+          {
+            outlet_code: "STTSM",
+            production_date: "2026-10-02",
+            menu_id: null,
+            menu_code: null,
+            menu_name: null,
+            sold: null,
+            waste: null,
+            adjustment: null,
+            compensation: null,
+            products: [
+              { product_id: 900009, product_name: "GREEN", multiplier: 1 },
+            ],
             pos_qty: 4,
-            selisih: null,
-          }),
+          },
         ],
       });
     }),
@@ -176,71 +166,102 @@ function urlTerakhir() {
 }
 
 describe("ClosingView — perbandingan POS", () => {
-  it("menampilkan baris dengan status dan selisih bertanda", async () => {
+  it("kolom dikelompokkan Colorplate dan POS", async () => {
     renderWithQuery(<ClosingView role="admin" />);
 
-    const selisih = (await screen.findByText("BLUE")).closest("tr")!;
-    expect(within(selisih).getByText("Selisih")).toBeInTheDocument();
-    expect(within(selisih).getByText("−11")).toBeInTheDocument();
-
-    const tidakAda = screen.getByText("GREEN").closest("tr")!;
-    expect(within(tidakAda).getByText("Tidak ada di closing")).toBeVisible();
-  });
-
-  it("baris produk menampilkan menu-menunya dan total closing", async () => {
-    renderWithQuery(<ClosingView role="admin" />);
-
-    const red = (await screen.findByText("RED")).closest("tr")!;
-    expect(within(red).getByText(/Salmon Nigiri/)).toBeVisible();
-    expect(within(red).getByText(/Tuna Nigiri/)).toBeVisible();
-
-    const blue = screen.getByText("BLUE").closest("tr")!;
-    // Closing 27, POS 16 → selisih −11 (POS − closing).
-    expect(within(blue).getByText("27")).toBeVisible();
-    expect(within(blue).getByText("16")).toBeVisible();
+    await screen.findByText("Salmon Nigiri");
+    for (const judul of [
+      "Colorplate",
+      "Terjual",
+      "Waste",
+      "Adjustment",
+      "Kompensasi",
+      "POS",
+      "Produk",
+      "Qty",
+    ]) {
+      expect(screen.getByRole("columnheader", { name: judul })).toBeVisible();
+    }
     expect(
-      screen.getByText(/qty POS − \(terjual \+ adjustment \+ kompensasi\)/i),
-    ).toBeVisible();
+      screen.queryByRole("columnheader", { name: /selisih|status/i }),
+    ).toBeNull();
   });
 
-  it("menu belum dipetakan tampil dengan nama menunya", async () => {
+  it("satu baris per menu dengan angka Colorplate dan qty POS", async () => {
+    renderWithQuery(<ClosingView role="admin" />);
+
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr")!;
+    expect(
+      within(row)
+        .getAllByRole("cell")
+        .map((c) => c.textContent),
+    ).toEqual([
+      expect.any(String),
+      "STTSM",
+      "Salmon NigiriSU-001",
+      "42",
+      "3",
+      "−2",
+      "7",
+      "RED900001",
+      "31",
+    ]);
+  });
+
+  it("menu dengan beberapa produk POS menampilkan semuanya dan pengalinya", async () => {
+    renderWithQuery(<ClosingView role="admin" />);
+
+    const row = (await screen.findByText("Ebi Nigiri")).closest("tr")!;
+    expect(within(row).getByText("BLUE")).toBeVisible();
+    expect(within(row).getByText("BLUE PROMO")).toBeVisible();
+    expect(within(row).getByText("900002 · × 2")).toBeVisible();
+    expect(within(row).getByText("16")).toBeVisible();
+  });
+
+  it("menu belum dipetakan tampil tanpa qty POS", async () => {
     renderWithQuery(<ClosingView role="admin" />);
 
     const lama = (await screen.findByText("Menu Lama")).closest("tr")!;
     expect(within(lama).getByText("Belum dipetakan")).toBeVisible();
+    expect(within(lama).getAllByRole("cell").at(-1)).toHaveTextContent("—");
   });
 
-  it("ringkasan per status bisa dipakai untuk menyaring", async () => {
-    renderWithQuery(<ClosingView role="admin" />);
-    const user = userEvent.setup();
+  it("produk POS tanpa menu di Colorplate tetap tampil untuk konsolidasi", async () => {
+    renderWithQuery(<ClosingView role="manager" />);
 
-    await screen.findByText("RED");
-    await user.click(
-      screen.getByRole("button", { name: /Belum dipetakan\s*1/ }),
-    );
-
-    expect(screen.getByText("Menu Lama")).toBeVisible();
-    expect(screen.queryByText("RED")).toBeNull();
+    const row = (await screen.findByText("GREEN")).closest("tr")!;
     expect(
-      screen.getByRole("button", { name: /Belum dipetakan\s*1/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+      within(row)
+        .getAllByRole("cell")
+        .map((c) => c.textContent),
+    ).toEqual([
+      expect.any(String),
+      "STTSM",
+      "Tidak ada di Colorplate",
+      "—",
+      "—",
+      "—",
+      "—",
+      "GREEN900009",
+      "4",
+    ]);
+    expect(
+      screen.getByText(/1 produk POS terjual tetapi tidak ada menunya/),
+    ).toBeVisible();
   });
 
-  it("saring 'perlu dicek' menyembunyikan baris yang cocok", async () => {
+  it("admin hanya diminta memetakan menu yang belum dipetakan", async () => {
     renderWithQuery(<ClosingView role="admin" />);
-    const user = userEvent.setup();
 
-    await screen.findByText("RED");
-    await user.click(screen.getByRole("button", { name: /Perlu dicek\s*3/ }));
-
-    expect(screen.queryByText("RED")).toBeNull();
-    expect(screen.getByText("BLUE")).toBeVisible();
+    expect(
+      await screen.findByText(/1 menu belum punya angka POS/),
+    ).toBeVisible();
   });
 
   it("tidak mengirim brand — endpoint closing tidak menerimanya", async () => {
     renderWithQuery(<ClosingView role="admin" />);
 
-    await screen.findByText("RED");
+    await screen.findByText("Salmon Nigiri");
     const params = permintaanComparison.at(-1)!;
     expect(params.get("brand")).toBeNull();
     expect(params.get("start_date")).toBe("2026-10-01");
@@ -251,7 +272,7 @@ describe("ClosingView — perbandingan POS", () => {
     renderWithQuery(<ClosingView role="admin" />);
     const user = userEvent.setup();
 
-    await screen.findByText("RED");
+    await screen.findByText("Salmon Nigiri");
     await user.click(
       screen.getByRole("switch", { name: /ikutkan transaksi void/i }),
     );
@@ -272,7 +293,7 @@ describe("ClosingView — perbandingan POS", () => {
   it("non-admin tidak ditawari halaman mapping", async () => {
     renderWithQuery(<ClosingView role="manager" />);
 
-    await screen.findByText("RED");
+    await screen.findByText("Salmon Nigiri");
     expect(screen.queryByRole("link", { name: /petakan menu/i })).toBeNull();
   });
 });

@@ -606,6 +606,13 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       Detail: identitas pesan, tabel error validasi (`data.items[0].sold`),
       peringatan, JSON asli atau teks mentah + tombol Salin. Unit + a11y + E2E
       (`closing.spec.ts`) lulus.
+- [x] **11.11 Perbandingan per menu Colorplate (2026-10-09)** — dari backend
+      7.9. Tab _Perbandingan POS_: kolom Tgl. produksi · Outlet · Menu ·
+      **Colorplate** (Terjual, Waste, Adjustment, Kompensasi) · **POS** (Produk,
+      Qty). Tombol saring status, kolom Selisih/Status, dan
+      `ClosingStatusBadge` dihapus; link "Petakan menu" tetap untuk admin.
+      Produk POS tanpa menu di Colorplate tampil "Tidak ada di Colorplate"
+      (konsolidasi). Tipe digenerate ulang; unit 314, a11y, dan E2E lulus.
 - [ ] **11.9 Test flaky lama** — `alur-utama.spec.ts` › "401 di tengah sesi…"
       sesekali gagal karena `getByText("OUTLET_001")` juga menangkap span
       pengukur recharts (`#recharts_measurement_span`). 3× ulang lulus semua;

@@ -858,10 +858,10 @@ export interface paths {
         };
         /**
          * Compare Closing With Pos
-         * @description Closing vs POS per outlet / tanggal produksi / ProductID POS.
+         * @description Colorplate vs POS per outlet / tanggal produksi / menu.
          *
-         *     `closing_qty` = Σ (sold + adjustment + compensation) × pengali dari semua
-         *     menu yang dipetakan ke produk itu; `selisih` = pos_qty − closing_qty.
+         *     Angka colorplate apa adanya; `pos_qty` = Σ qty orderdetail outlet & tanggal
+         *     yang sama dari ProductID yang dipetakan ke menu itu (kosong = belum dipetakan).
          */
         get: operations["compare_closing_with_pos_api_closing_reports_comparison_get"];
         put?: never;
@@ -1108,27 +1108,14 @@ export interface components {
             /** New Password */
             new_password: string;
         };
-        /** ClosingComparisonMenu */
-        ClosingComparisonMenu: {
-            /**
-             * Menu Id
-             * Format: uuid
-             */
-            menu_id: string;
-            /** Menu Code */
-            menu_code?: string | null;
-            /** Menu Name */
-            menu_name: string;
+        /** ClosingComparisonProduct */
+        ClosingComparisonProduct: {
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
             /** Multiplier */
-            multiplier?: number | null;
-            /** Sold */
-            sold: number;
-            /** Waste */
-            waste: number;
-            /** Adjustment */
-            adjustment: number;
-            /** Compensation */
-            compensation: number;
+            multiplier: number;
         };
         /** ClosingComparisonResponse */
         ClosingComparisonResponse: {
@@ -1142,10 +1129,13 @@ export interface components {
         };
         /**
          * ClosingComparisonRow
-         * @description Satu produk POS (atau satu menu yang belum dipetakan) per outlet & tanggal.
+         * @description Satu menu colorplate per outlet & tanggal produksi, berdampingan dengan POS.
          *
-         *     closing_qty = Σ (sold + adjustment + compensation) × pengali menu-menunya;
-         *     selisih = pos_qty − closing_qty (rumus pengirim).
+         *     pos_qty = Σ qty orderdetail (outlet & tanggal sama) dari ProductID yang
+         *     dipetakan ke menu ini; kosong kalau menu belum dipetakan.
+         *
+         *     Baris tanpa menu (`menu_id` & angka colorplate kosong) = produk POS
+         *     terpetakan yang terjual tetapi tidak satu pun menunya ada di colorplate.
          */
         ClosingComparisonRow: {
             /** Outlet Code */
@@ -1155,20 +1145,24 @@ export interface components {
              * Format: date
              */
             production_date: string;
-            /** Product Id */
-            product_id?: number | null;
-            /** Product Name */
-            product_name?: string | null;
-            /** Menus */
-            menus?: components["schemas"]["ClosingComparisonMenu"][];
-            /** Closing Qty */
-            closing_qty?: number | null;
+            /** Menu Id */
+            menu_id?: string | null;
+            /** Menu Code */
+            menu_code?: string | null;
+            /** Menu Name */
+            menu_name?: string | null;
+            /** Sold */
+            sold?: number | null;
+            /** Waste */
+            waste?: number | null;
+            /** Adjustment */
+            adjustment?: number | null;
+            /** Compensation */
+            compensation?: number | null;
+            /** Products */
+            products?: components["schemas"]["ClosingComparisonProduct"][];
             /** Pos Qty */
             pos_qty?: number | null;
-            /** Selisih */
-            selisih?: number | null;
-            /** Status */
-            status: string;
         };
         /** ClosingMenuListResponse */
         ClosingMenuListResponse: {
