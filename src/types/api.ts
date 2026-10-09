@@ -1114,8 +1114,12 @@ export interface components {
             product_id: number;
             /** Product Name */
             product_name?: string | null;
+            /** Product Group */
+            product_group?: string | null;
             /** Multiplier */
             multiplier: number;
+            /** Is Mapped */
+            is_mapped: boolean;
         };
         /** ClosingComparisonResponse */
         ClosingComparisonResponse: {
@@ -1134,8 +1138,9 @@ export interface components {
          *     pos_qty = Σ qty orderdetail (outlet & tanggal sama) dari ProductID yang
          *     dipetakan ke menu ini; kosong kalau menu belum dipetakan.
          *
-         *     Baris tanpa menu (`menu_id` & angka colorplate kosong) = produk POS
-         *     terpetakan yang terjual tetapi tidak satu pun menunya ada di colorplate.
+         *     Baris tanpa menu (`menu_id` & angka colorplate kosong) = produk POS yang
+         *     terjual tetapi qty-nya tidak tampil di baris menu mana pun (belum
+         *     dipetakan, bukan colorplate, atau menunya tidak ada di colorplate).
          */
         ClosingComparisonRow: {
             /** Outlet Code */

@@ -29,7 +29,14 @@ function baris(nama: string, lain = {}) {
     waste: 1,
     adjustment: 0,
     compensation: 0,
-    products: [{ product_id: 900001, product_name: "RED", multiplier: 1 }],
+    products: [
+      {
+        product_id: 900001,
+        product_name: "RED",
+        multiplier: 1,
+        is_mapped: true,
+      },
+    ],
     pos_qty: 5,
     ...lain,
   };
@@ -65,8 +72,18 @@ beforeEach(() => {
           }),
           baris("Ebi Nigiri", {
             products: [
-              { product_id: 900002, product_name: "BLUE", multiplier: 2 },
-              { product_id: 900003, product_name: "BLUE PROMO", multiplier: 1 },
+              {
+                product_id: 900002,
+                product_name: "BLUE",
+                multiplier: 2,
+                is_mapped: true,
+              },
+              {
+                product_id: 900003,
+                product_name: "BLUE PROMO",
+                multiplier: 1,
+                is_mapped: true,
+              },
             ],
             pos_qty: 16,
           }),
@@ -82,9 +99,35 @@ beforeEach(() => {
             adjustment: null,
             compensation: null,
             products: [
-              { product_id: 900009, product_name: "GREEN", multiplier: 1 },
+              {
+                product_id: 900009,
+                product_name: "GREEN",
+                multiplier: 1,
+                is_mapped: true,
+              },
             ],
             pos_qty: 4,
+          },
+          {
+            outlet_code: "STTSM",
+            production_date: "2026-10-02",
+            menu_id: null,
+            menu_code: null,
+            menu_name: null,
+            sold: null,
+            waste: null,
+            adjustment: null,
+            compensation: null,
+            products: [
+              {
+                product_id: 700001,
+                product_name: "ES TEH",
+                product_group: "MINUMAN",
+                multiplier: 1,
+                is_mapped: false,
+              },
+            ],
+            pos_qty: 12,
           },
         ],
       });
@@ -246,8 +289,21 @@ describe("ClosingView — perbandingan POS", () => {
       "4",
     ]);
     expect(
-      screen.getByText(/1 produk POS terjual tetapi tidak ada menunya/),
+      screen.getByText(/2 produk POS terjual tetapi tidak ada menunya/),
     ).toBeVisible();
+  });
+
+  it("transaksi POS bukan Colorplate ikut tampil dengan group-nya", async () => {
+    renderWithQuery(<ClosingView role="manager" />);
+
+    const row = (await screen.findByText("ES TEH")).closest("tr")!;
+    expect(within(row).getByText("Tidak ada di Colorplate")).toBeVisible();
+    expect(within(row).getByText("700001 · MINUMAN")).toBeVisible();
+    expect(within(row).getByText("Belum dipetakan ke menu")).toBeVisible();
+    expect(within(row).getAllByRole("cell").at(-1)).toHaveTextContent("12");
+
+    const salmon = screen.getByText("Salmon Nigiri").closest("tr")!;
+    expect(within(salmon).queryByText("Belum dipetakan ke menu")).toBeNull();
   });
 
   it("admin hanya diminta memetakan menu yang belum dipetakan", async () => {

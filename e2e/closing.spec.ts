@@ -59,6 +59,11 @@ test.describe("Closing report (11.6)", () => {
     // OUTLET_002 menjual produk Tuna (7), tapi Tuna tidak ada di colorplate-nya.
     const hanyaPos = barisMenu(page, "OUTLET_002", "Tidak ada di Colorplate");
     await expect(hanyaPos.getByRole("cell").last()).toHaveText("7");
+    // Transaksi POS bukan colorplate juga tampil.
+    const esTeh = barisMenu(page, "OUTLET_001", "Es Teh");
+    await expect(esTeh.getByText("Tidak ada di Colorplate")).toBeVisible();
+    await expect(esTeh.getByText("Belum dipetakan ke menu")).toBeVisible();
+    await expect(esTeh.getByRole("cell").last()).toHaveText("15");
   });
 
   test("detail laporan memperlihatkan item dan revisi aktif", async ({

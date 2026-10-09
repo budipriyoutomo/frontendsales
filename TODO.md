@@ -611,8 +611,10 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       **Colorplate** (Terjual, Waste, Adjustment, Kompensasi) · **POS** (Produk,
       Qty). Tombol saring status, kolom Selisih/Status, dan
       `ClosingStatusBadge` dihapus; link "Petakan menu" tetap untuk admin.
-      Produk POS tanpa menu di Colorplate tampil "Tidak ada di Colorplate"
-      (konsolidasi). Tipe digenerate ulang; unit 314, a11y, dan E2E lulus.
+      Semua transaksi POS outlet/tanggal itu yang tidak ada di baris menu —
+      termasuk produk bukan Colorplate — tampil "Tidak ada di Colorplate"
+      dengan group POS dan tanda "Belum dipetakan ke menu" (konsolidasi). Tipe
+      digenerate ulang; unit 315, a11y, dan E2E lulus.
 - [ ] **11.9 Test flaky lama** — `alur-utama.spec.ts` › "401 di tengah sesi…"
       sesekali gagal karena `getByText("OUTLET_001")` juga menangkap span
       pengukur recharts (`#recharts_measurement_span`). 3× ulang lulus semua;

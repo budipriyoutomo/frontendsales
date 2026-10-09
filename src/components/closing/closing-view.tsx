@@ -109,7 +109,7 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   const belumDipetakan = baris.filter(
     (b) => b.menu_id && !b.products?.length,
   ).length;
-  // Produk POS terpetakan yang terjual tanpa satu pun menunya di Colorplate.
+  // Produk POS yang terjual tetapi qty-nya tidak ada di baris menu mana pun.
   const hanyaPos = baris.filter((b) => !b.menu_id).length;
 
   return (
@@ -119,8 +119,9 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
           <p className="text-muted-foreground max-w-3xl text-sm">
             Satu baris per menu Colorplate per outlet dan tanggal produksi. POS
             = jumlah qty order detail pada outlet dan tanggal yang sama dari
-            produk POS yang dipetakan ke menu itu. Produk POS terpetakan yang
-            terjual tanpa menunya di Colorplate ikut tampil untuk konsolidasi.
+            produk POS yang dipetakan ke menu itu. Transaksi POS lain pada
+            outlet dan tanggal yang sama — termasuk produk yang bukan Colorplate
+            — ikut tampil untuk konsolidasi.
           </p>
 
           <div className="flex items-center gap-2">
@@ -253,7 +254,10 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   );
 }
 
-/** Produk POS yang dipetakan ke satu menu; qty-nya dijumlah di kolom POS. */
+/**
+ * Produk POS yang dipetakan ke satu menu (qty-nya dijumlah di kolom POS), atau
+ * satu produk POS untuk baris tanpa menu.
+ */
 function ProdukPos({
   products,
 }: {
@@ -273,8 +277,14 @@ function ProdukPos({
           <div className="font-medium">{p.product_name ?? "—"}</div>
           <div className="text-muted-foreground font-mono text-xs">
             {p.product_id}
+            {p.product_group ? ` · ${p.product_group}` : ""}
             {p.multiplier !== 1 ? ` · × ${p.multiplier}` : ""}
           </div>
+          {p.is_mapped ? null : (
+            <div className="text-xs text-amber-800 dark:text-amber-400">
+              Belum dipetakan ke menu
+            </div>
+          )}
         </li>
       ))}
     </ul>

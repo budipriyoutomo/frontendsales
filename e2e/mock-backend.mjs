@@ -156,8 +156,15 @@ const PRODUK_POS = [
   { product_id: 200104, product_name: "Salmon HR", product_group: "MAKANAN" },
   { product_id: 200201, product_name: "Tuna HR", product_group: "MAKANAN" },
 ];
+/** Produk POS bukan colorplate — hanya tampil di perbandingan, tidak bisa dipetakan. */
+const PRODUK_POS_LAIN = [
+  { product_id: 300001, product_name: "Es Teh", product_group: "MINUMAN" },
+];
+const PRODUK_POS_INFO = Object.fromEntries(
+  [...PRODUK_POS, ...PRODUK_POS_LAIN].map((p) => [p.product_id, p]),
+);
 const QTY_POS = {
-  OUTLET_001: { 200104: 42, 200201: 10 },
+  OUTLET_001: { 200104: 42, 200201: 10, 300001: 15 },
   OUTLET_002: { 200104: 5, 200201: 7 },
 };
 
@@ -248,8 +255,8 @@ const PESAN_CLOSING = [
 /**
  * Meniru `compare_with_pos`: satu baris per menu colorplate; POS = Σ qty
  * produk POS yang dipetakan ke menu itu (tanpa pengali), kosong kalau belum
- * dipetakan. Produk terpetakan yang terjual tanpa menunya di colorplate jadi
- * baris tanpa menu.
+ * dipetakan. Produk POS lain yang terjual di outlet itu (termasuk yang tidak
+ * dipetakan) jadi baris tanpa menu.
  */
 function perbandingan(outlet) {
   const baris = [];
@@ -262,7 +269,9 @@ function perbandingan(outlet) {
         .map(({ product_id, product_name, multiplier }) => ({
           product_id,
           product_name,
+          product_group: PRODUK_POS_INFO[product_id]?.product_group ?? null,
           multiplier,
+          is_mapped: true,
         }));
       baris.push({
         outlet_code: o,
@@ -280,7 +289,7 @@ function perbandingan(outlet) {
           : null,
       });
     }
-    // Produk terpetakan yang terjual tanpa satu pun menunya di colorplate.
+    // Produk POS yang qty-nya belum tampil di baris menu mana pun.
     const tampil = new Set(
       baris
         .filter((b) => b.outlet_code === o)
@@ -294,7 +303,7 @@ function perbandingan(outlet) {
     }
     for (const [pid, qty] of Object.entries(QTY_POS[o])) {
       const product_id = Number(pid);
-      if (!qty || tampil.has(product_id) || !terpetakan.has(product_id)) {
+      if (!qty || tampil.has(product_id)) {
         continue;
       }
       baris.push({
@@ -310,8 +319,13 @@ function perbandingan(outlet) {
         products: [
           {
             product_id,
-            product_name: terpetakan.get(product_id),
+            product_name:
+              terpetakan.get(product_id) ??
+              PRODUK_POS_INFO[product_id]?.product_name ??
+              null,
+            product_group: PRODUK_POS_INFO[product_id]?.product_group ?? null,
             multiplier: 1,
+            is_mapped: terpetakan.has(product_id),
           },
         ],
         pos_qty: qty,

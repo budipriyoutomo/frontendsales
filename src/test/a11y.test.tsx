@@ -189,7 +189,12 @@ describe("Aksesibilitas dasar (8.7)", () => {
               adjustment: -1,
               compensation: 0,
               products: [
-                { product_id: 900001, product_name: "RED", multiplier: 1 },
+                {
+                  product_id: 900001,
+                  product_name: "RED",
+                  multiplier: 1,
+                  is_mapped: true,
+                },
               ],
               pos_qty: 3,
             },
