@@ -9,6 +9,7 @@ import {
   Link2,
   Layers,
   LayoutDashboard,
+  Package,
   ReceiptText,
   RefreshCw,
   Store,
@@ -27,6 +28,7 @@ const IKON = {
   kunci: KeyRound,
   group: Layers,
   brand: Store,
+  produk: Package,
   pengguna: Users,
 } as const;
 

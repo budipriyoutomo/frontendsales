@@ -36,3 +36,6 @@ export type ClosingComparisonRow = S["ClosingComparisonRow"];
 export type ClosingMessageSummary = S["ClosingMessageSummary"];
 export type ClosingMessageDetail = S["ClosingMessageDetail"];
 export type ClosingMessageCounts = S["ClosingMessageCounts"];
+export type Product = S["ProductResponse"];
+export type ProductPosMapping = S["ProductPosMappingResponse"];
+export type PosCandidate = S["PosCandidateResponse"];

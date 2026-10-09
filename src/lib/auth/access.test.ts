@@ -51,6 +51,12 @@ describe("bolehMasukHalaman (3.3, 3.9)", () => {
     expect(bolehMasukHalaman("outlet", "/brand")).toBe(false);
   });
 
+  it("halaman produk khusus admin", () => {
+    expect(bolehMasukHalaman("admin", "/produk")).toBe(true);
+    expect(bolehMasukHalaman("manager", "/produk")).toBe(false);
+    expect(bolehMasukHalaman("outlet", "/produk")).toBe(false);
+  });
+
   it("halaman product group khusus admin (10.4, 10.16)", () => {
     expect(bolehMasukHalaman("admin", "/product-group")).toBe(true);
     expect(bolehMasukHalaman("manager", "/product-group")).toBe(false);

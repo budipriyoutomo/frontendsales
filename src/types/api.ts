@@ -772,6 +772,105 @@ export interface paths {
         patch: operations["update_brand_api_brands__brand_id__patch"];
         trace?: never;
     };
+    "/api/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Products
+         * @description Semua produk, termasuk yang nonaktif, beserta mapping POS-nya.
+         */
+        get: operations["list_products_api_products_get"];
+        put?: never;
+        /** Create Product */
+        post: operations["create_product_api_products_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/pos-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pos Candidates
+         * @description ProductID per outlet dari data penjualan, beserta produk master yang memetakannya.
+         */
+        get: operations["list_pos_candidates_api_products_pos_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Product */
+        get: operations["get_product_api_products__product_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Product
+         * @description Ubah field yang dikirim. `null` untuk category / unit / brand_id mengosongkannya.
+         */
+        patch: operations["update_product_api_products__product_id__patch"];
+        trace?: never;
+    };
+    "/api/products/{product_id}/pos-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Pos Mapping
+         * @description Petakan ProductID POS satu outlet ke produk ini.
+         */
+        post: operations["add_pos_mapping_api_products__product_id__pos_mappings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/{product_id}/pos-mappings/{mapping_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Pos Mapping */
+        patch: operations["update_pos_mapping_api_products__product_id__pos_mappings__mapping_id__patch"];
+        trace?: never;
+    };
     "/api/closing-menus": {
         parameters: {
             query?: never;
@@ -1543,6 +1642,13 @@ export interface components {
              */
             is_active: boolean;
         };
+        /** CreatePosMappingRequest */
+        CreatePosMappingRequest: {
+            /** Outlet Code */
+            outlet_code: string;
+            /** Pos Product Id */
+            pos_product_id: number;
+        };
         /**
          * CreateProductGroupMappingRequest
          * @description Nama dinormalisasi oleh service: `colorplate ` tersimpan sebagai `COLORPLATE`.
@@ -1581,6 +1687,32 @@ export interface components {
         CreateProductMenuMappingRequest: {
             /** Product Id */
             product_id: number;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * CreateProductRequest
+         * @description Kode dinormalisasi oleh service: `p-001 ` tersimpan sebagai `P-001`.
+         */
+        CreateProductRequest: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category?: string | null;
+            /** Unit */
+            unit?: string | null;
+            /**
+             * Price
+             * @default 0
+             */
+            price: number | string;
+            /** Brand Id */
+            brand_id?: number | null;
             /**
              * Is Active
              * @default true
@@ -1733,6 +1865,51 @@ export interface components {
             /** Data */
             data: string[];
         };
+        /** PosCandidateListResponse */
+        PosCandidateListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["PosCandidateResponse"][];
+        };
+        /** PosCandidateResponse */
+        PosCandidateResponse: {
+            /** Outlet Code */
+            outlet_code: string;
+            /** Pos Product Id */
+            pos_product_id: number;
+            /** Pos Product Name */
+            pos_product_name?: string | null;
+            /** Pos Product Group */
+            pos_product_group?: string | null;
+            /** Last Sale Date */
+            last_sale_date?: string | null;
+            /** Mapped Product Id */
+            mapped_product_id?: number | null;
+            /** Mapped Product Code */
+            mapped_product_code?: string | null;
+        };
+        /** ProductBrand */
+        ProductBrand: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** ProductDetailResponse */
+        ProductDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ProductResponse"];
+        };
         /** ProductGroupListResponse */
         ProductGroupListResponse: {
             /**
@@ -1800,6 +1977,16 @@ export interface components {
             sale_date?: string | null;
             /** Sold */
             sold: number;
+        };
+        /** ProductListResponse */
+        ProductListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ProductResponse"][];
         };
         /** ProductMenuCandidate */
         ProductMenuCandidate: {
@@ -1881,6 +2068,49 @@ export interface components {
             is_active: boolean;
             /** Colorplates */
             colorplates?: components["schemas"]["ProductMenuColorplateResponse"][];
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** ProductPosMappingResponse */
+        ProductPosMappingResponse: {
+            /** Id */
+            id: number;
+            /** Outlet Code */
+            outlet_code: string;
+            /** Pos Product Id */
+            pos_product_id: number;
+            /** Pos Product Name */
+            pos_product_name?: string | null;
+            /** Pos Product Group */
+            pos_product_group?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** ProductResponse */
+        ProductResponse: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category?: string | null;
+            /** Unit */
+            unit?: string | null;
+            /** Price */
+            price: number;
+            brand?: components["schemas"]["ProductBrand"] | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Pos Mappings */
+            pos_mappings?: components["schemas"]["ProductPosMappingResponse"][];
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -2433,6 +2663,11 @@ export interface components {
             /** Is Active */
             is_active?: boolean | null;
         };
+        /** UpdatePosMappingRequest */
+        UpdatePosMappingRequest: {
+            /** Is Active */
+            is_active: boolean;
+        };
         /**
          * UpdateProductGroupMappingRequest
          * @description Hanya status aktif.
@@ -2462,6 +2697,24 @@ export interface components {
         UpdateProductMenuMappingRequest: {
             /** Is Active */
             is_active: boolean;
+        };
+        /**
+         * UpdateProductRequest
+         * @description Hanya field yang dikirim yang diubah. Kode sengaja tidak bisa diubah.
+         */
+        UpdateProductRequest: {
+            /** Name */
+            name?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Unit */
+            unit?: string | null;
+            /** Price */
+            price?: number | string | null;
+            /** Brand Id */
+            brand_id?: number | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /**
          * UpdateUserRequest
@@ -3869,6 +4122,231 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_products_api_products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductListResponse"];
+                };
+            };
+        };
+    };
+    create_product_api_products_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pos_candidates_api_products_pos_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Batasi ke satu outlet */
+                outlet?: string | null;
+                /** @description Cari nama produk POS atau ProductID persis */
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PosCandidateListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_api_products__product_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_api_products__product_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_pos_mapping_api_products__product_id__pos_mappings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePosMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_pos_mapping_api_products__product_id__pos_mappings__mapping_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePosMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponse"];
                 };
             };
             /** @description Validation Error */

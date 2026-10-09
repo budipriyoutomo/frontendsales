@@ -222,6 +222,11 @@ describe("ClosingView — perbandingan POS", () => {
       "POS",
       "Produk",
       "Qty",
+      "Total",
+      "Total Sold",
+      "Total Waste",
+      "Total Adjustment",
+      "Total Kompensasi",
     ]) {
       expect(screen.getByRole("columnheader", { name: judul })).toBeVisible();
     }
@@ -248,6 +253,10 @@ describe("ClosingView — perbandingan POS", () => {
       "7",
       "RED900001",
       "31",
+      "73",
+      "3",
+      "−2",
+      "7",
     ]);
   });
 
@@ -266,7 +275,10 @@ describe("ClosingView — perbandingan POS", () => {
 
     const lama = (await screen.findByText("Menu Lama")).closest("tr")!;
     expect(within(lama).getByText("Belum dipetakan")).toBeVisible();
-    expect(within(lama).getAllByRole("cell").at(-1)).toHaveTextContent("—");
+    const sel = within(lama).getAllByRole("cell");
+    // Qty POS kosong; Total Sold = terjual 5 + 0.
+    expect(sel.at(-5)).toHaveTextContent("—");
+    expect(sel.at(-4)).toHaveTextContent("5");
   });
 
   it("produk POS tanpa menu di Colorplate tetap tampil untuk konsolidasi", async () => {
@@ -287,6 +299,10 @@ describe("ClosingView — perbandingan POS", () => {
       "—",
       "GREEN900009",
       "4",
+      "4",
+      "0",
+      "0",
+      "0",
     ]);
     expect(
       screen.getByText(/2 produk POS terjual tetapi tidak ada menunya/),
@@ -300,7 +316,7 @@ describe("ClosingView — perbandingan POS", () => {
     expect(within(row).getByText("Tidak ada di Colorplate")).toBeVisible();
     expect(within(row).getByText("700001 · MINUMAN")).toBeVisible();
     expect(within(row).getByText("Belum dipetakan ke menu")).toBeVisible();
-    expect(within(row).getAllByRole("cell").at(-1)).toHaveTextContent("12");
+    expect(within(row).getAllByRole("cell").at(-5)).toHaveTextContent("12");
 
     const salmon = screen.getByText("Salmon Nigiri").closest("tr")!;
     expect(within(salmon).queryByText("Belum dipetakan ke menu")).toBeNull();

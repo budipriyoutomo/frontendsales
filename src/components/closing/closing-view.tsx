@@ -28,7 +28,7 @@ import {
   useClosingComparison,
   useClosingReports,
 } from "@/hooks/use-closing";
-import { formatSelisih } from "@/lib/closing";
+import { formatSelisih, totalBaris } from "@/lib/closing";
 import { bacaFilter, filterKeQuery, type Filter } from "@/lib/filter";
 import {
   formatAngka,
@@ -121,7 +121,8 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
             = jumlah qty order detail pada outlet dan tanggal yang sama dari
             produk POS yang dipetakan ke menu itu. Transaksi POS lain pada
             outlet dan tanggal yang sama — termasuk produk yang bukan Colorplate
-            — ikut tampil untuk konsolidasi.
+            — ikut tampil untuk konsolidasi. Total Sold = Colorplate terjual +
+            qty POS; angka yang kosong dihitung 0.
           </p>
 
           <div className="flex items-center gap-2">
@@ -190,6 +191,13 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
                   >
                     POS
                   </TableHead>
+                  <TableHead
+                    colSpan={4}
+                    scope="colgroup"
+                    className="border-l text-center"
+                  >
+                    Total
+                  </TableHead>
                 </TableRow>
                 <TableRow>
                   <TableHead className="border-l text-right">Terjual</TableHead>
@@ -198,53 +206,76 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
                   <TableHead className="text-right">Kompensasi</TableHead>
                   <TableHead className="border-l">Produk</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="border-l text-right">
+                    Total Sold
+                  </TableHead>
+                  <TableHead className="text-right">Total Waste</TableHead>
+                  <TableHead className="text-right">Total Adjustment</TableHead>
+                  <TableHead className="text-right">Total Kompensasi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {baris.map((b) => (
-                  <TableRow
-                    key={`${b.outlet_code}-${b.production_date}-${b.menu_id ?? `pos-${b.products?.[0]?.product_id}`}`}
-                  >
-                    <TableCell className="whitespace-nowrap">
-                      {formatTanggal(b.production_date)}
-                    </TableCell>
-                    <TableCell className="font-mono">{b.outlet_code}</TableCell>
-                    <TableCell>
-                      {b.menu_id ? (
-                        <>
-                          <div className="font-medium">{b.menu_name}</div>
-                          {b.menu_code ? (
-                            <div className="text-muted-foreground font-mono text-xs">
-                              {b.menu_code}
-                            </div>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="text-destructive text-sm">
-                          Tidak ada di Colorplate
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="border-l text-right tabular-nums">
-                      {formatAngka(b.sold)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatAngka(b.waste)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatSelisih(b.adjustment)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatAngka(b.compensation)}
-                    </TableCell>
-                    <TableCell className="border-l">
-                      <ProdukPos products={b.products ?? []} />
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {b.pos_qty == null ? "—" : formatAngka(b.pos_qty)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {baris.map((b) => {
+                  const total = totalBaris(b);
+                  return (
+                    <TableRow
+                      key={`${b.outlet_code}-${b.production_date}-${b.menu_id ?? `pos-${b.products?.[0]?.product_id}`}`}
+                    >
+                      <TableCell className="whitespace-nowrap">
+                        {formatTanggal(b.production_date)}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {b.outlet_code}
+                      </TableCell>
+                      <TableCell>
+                        {b.menu_id ? (
+                          <>
+                            <div className="font-medium">{b.menu_name}</div>
+                            {b.menu_code ? (
+                              <div className="text-muted-foreground font-mono text-xs">
+                                {b.menu_code}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-destructive text-sm">
+                            Tidak ada di Colorplate
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="border-l text-right tabular-nums">
+                        {formatAngka(b.sold)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAngka(b.waste)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatSelisih(b.adjustment)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAngka(b.compensation)}
+                      </TableCell>
+                      <TableCell className="border-l">
+                        <ProdukPos products={b.products ?? []} />
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {b.pos_qty == null ? "—" : formatAngka(b.pos_qty)}
+                      </TableCell>
+                      <TableCell className="border-l text-right font-medium tabular-nums">
+                        {formatAngka(total.sold)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAngka(total.waste)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatSelisih(total.adjustment)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAngka(total.compensation)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -51,19 +51,21 @@ test.describe("Closing report (11.6)", () => {
     // Salmon: terjual 42, POS 42 dari ProductID 200104.
     const salmon = barisMenu(page, "OUTLET_001", "Salmon Nigiri");
     await expect(salmon.getByText("200104")).toBeVisible();
-    await expect(salmon.getByRole("cell").last()).toHaveText("42");
+    await expect(salmon.getByRole("cell").nth(-5)).toHaveText("42");
+    // Total Sold = Colorplate terjual 42 + qty POS 42.
+    await expect(salmon.getByRole("cell").nth(-4)).toHaveText("84");
     // Tuna: terjual 12, POS 10.
     const tuna = barisMenu(page, "OUTLET_001", "Tuna Nigiri");
     await expect(tuna.getByRole("cell").nth(3)).toHaveText("12");
-    await expect(tuna.getByRole("cell").last()).toHaveText("10");
+    await expect(tuna.getByRole("cell").nth(-5)).toHaveText("10");
     // OUTLET_002 menjual produk Tuna (7), tapi Tuna tidak ada di colorplate-nya.
     const hanyaPos = barisMenu(page, "OUTLET_002", "Tidak ada di Colorplate");
-    await expect(hanyaPos.getByRole("cell").last()).toHaveText("7");
+    await expect(hanyaPos.getByRole("cell").nth(-5)).toHaveText("7");
     // Transaksi POS bukan colorplate juga tampil.
     const esTeh = barisMenu(page, "OUTLET_001", "Es Teh");
     await expect(esTeh.getByText("Tidak ada di Colorplate")).toBeVisible();
     await expect(esTeh.getByText("Belum dipetakan ke menu")).toBeVisible();
-    await expect(esTeh.getByRole("cell").last()).toHaveText("15");
+    await expect(esTeh.getByRole("cell").nth(-5)).toHaveText("15");
   });
 
   test("detail laporan memperlihatkan item dan revisi aktif", async ({

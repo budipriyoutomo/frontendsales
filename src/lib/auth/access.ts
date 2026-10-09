@@ -22,6 +22,7 @@ export type NavItem = {
     | "kunci"
     | "group"
     | "brand"
+    | "produk"
     | "pengguna";
   roles: readonly Role[];
 };
@@ -89,6 +90,14 @@ export const NAV: readonly NavItem[] = [
     href: "/brand",
     label: "Brand",
     icon: "brand",
+    roles: ["admin"],
+  },
+  {
+    // Master data dan mapping ProductID POS — sama seperti brand, hanya admin
+    // yang mengubah. Manager tetap bisa membaca lewat API.
+    href: "/produk",
+    label: "Produk",
+    icon: "produk",
     roles: ["admin"],
   },
   {
