@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ThemeToggle } from "@/components/tampilan/theme-toggle";
 import type { NavItem } from "@/lib/auth/access";
 import type { CurrentUser } from "@/lib/auth/current-user";
 
@@ -62,14 +63,19 @@ export function AppShell({
           Maharasa Sync
         </Link>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <ThemeToggle />
           <UserMenu user={user} />
         </div>
       </header>
 
       <div className="flex flex-1">
-        <aside className="bg-sidebar hidden w-60 shrink-0 border-r p-3 md:block">
-          <SidebarNav items={nav} />
+        <aside className="bg-sidebar hidden w-60 shrink-0 border-r md:block">
+          {/* Menempel di bawah header supaya menu tetap terlihat saat
+              halaman panjang digulir. */}
+          <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto p-3">
+            <SidebarNav items={nav} />
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>

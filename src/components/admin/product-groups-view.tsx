@@ -39,6 +39,7 @@ import {
   validasiNamaGroup,
 } from "@/lib/product-group";
 import type { ProductGroupMapping } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 /** Saran dibatasi supaya data penjualan yang ramai tidak menenggelamkan form. */
 const SARAN_MAKSIMAL = 12;
@@ -129,27 +130,32 @@ export function ProductGroupsView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Product Group</h1>
-        <p className="text-muted-foreground text-sm">
-          Group yang penjualannya dipublish ke RabbitMQ. Perubahan di sini
-          berlaku pada publish berikutnya dan langsung mengubah event yang
-          diterima consumer.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Publish hanya mengirim format colorplate: dari daftar ini hanya status
-          group colorplate yang dipakai. Menu dari group lain ikut terhitung
-          lewat konversi warna di Menu satuan.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Group tidak bisa dihapus atau diganti namanya: barisnya disimpan
-          sebagai jejak group apa saja yang pernah dipublish. Salah ketik?
-          Tambahkan nama yang benar, lalu nonaktifkan yang lama.
-        </p>
-      </div>
+      <PageHeader
+        title="Daftar group"
+        level={2}
+        description="Group yang penjualannya dipublish ke RabbitMQ."
+        details={
+          <>
+            <p>
+              Perubahan di sini berlaku pada publish berikutnya dan langsung
+              mengubah event yang diterima consumer.
+            </p>
+            <p>
+              Publish hanya mengirim format colorplate: dari daftar ini hanya
+              status group colorplate yang dipakai. Menu dari group lain ikut
+              terhitung lewat konversi warna di Menu satuan.
+            </p>
+            <p>
+              Group tidak bisa dihapus atau diganti namanya: barisnya disimpan
+              sebagai jejak group apa saja yang pernah dipublish. Salah ketik?
+              Tambahkan nama yang benar, lalu nonaktifkan yang lama.
+            </p>
+          </>
+        }
+      />
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <form
             className="flex flex-wrap items-start gap-3"
             onSubmit={kirim}
@@ -238,7 +244,7 @@ export function ProductGroupsView() {
       </Card>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {daftar.isPending ? (
             <KartuSkeleton baris={4} />
           ) : daftar.isError ? (

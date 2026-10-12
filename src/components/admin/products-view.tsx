@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CircleOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -176,41 +177,48 @@ export function ProductsView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Produk</h1>
-        <p className="text-muted-foreground text-sm">
-          Master data produk. ProductID dari POS bisa berbeda di tiap outlet —
-          petakan ProductID tiap outlet ke produk di sini supaya produk yang
-          sama dikenali sebagai satu produk.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Produk tidak bisa dihapus dan ProductID-nya tidak bisa diganti. Produk
-          yang tidak dipakai lagi cukup dinonaktifkan.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="cari-produk">Cari</Label>
-          <Input
-            id="cari-produk"
-            className="w-72 max-w-full"
-            value={cari}
-            onChange={(e) => setCari(e.target.value)}
-            placeholder="ProductID, Product Code, nama, kategori, atau brand"
-            autoComplete="off"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setImporBuka(true)}>
-            Ambil dari transaksi
-          </Button>
-          <Button onClick={() => setSasaran("baru")}>Tambah produk</Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Produk"
+        description="Master data produk dan pemetaan ProductID POS tiap outlet."
+        details={
+          <>
+            <p>
+              ProductID dari POS bisa berbeda di tiap outlet — petakan ProductID
+              tiap outlet ke produk di sini supaya produk yang sama dikenali
+              sebagai satu produk.
+            </p>
+            <p>
+              Produk tidak bisa dihapus dan ProductID-nya tidak bisa diganti.
+              Produk yang tidak dipakai lagi cukup dinonaktifkan.
+            </p>
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setImporBuka(true)}>
+              Ambil dari transaksi
+            </Button>
+            <Button onClick={() => setSasaran("baru")}>Tambah produk</Button>
+          </>
+        }
+      />
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="cari-produk">Cari</Label>
+              <Input
+                id="cari-produk"
+                className="w-96 max-w-full"
+                value={cari}
+                onChange={(e) => setCari(e.target.value)}
+                placeholder="ProductID, Product Code, nama, kategori, atau brand"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
           {products.isPending ? (
             <KartuSkeleton baris={4} />
           ) : products.isError ? (

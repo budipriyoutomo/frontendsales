@@ -24,7 +24,7 @@ export function SummaryCards({ filter }: { filter: Filter }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="pt-6">
+            <CardContent>
               <KartuSkeleton baris={2} />
             </CardContent>
           </Card>

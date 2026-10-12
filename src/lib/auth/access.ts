@@ -25,7 +25,18 @@ export type NavItem = {
     | "produk"
     | "pengguna";
   roles: readonly Role[];
+  /** Kelompok di sidebar; urutan kelompok mengikuti `NAV_SECTIONS`. */
+  section: NavSection;
 };
+
+export type NavSection = "laporan" | "master" | "integrasi" | "admin";
+
+export const NAV_SECTIONS: readonly { id: NavSection; label: string }[] = [
+  { id: "laporan", label: "Laporan" },
+  { id: "master", label: "Master data" },
+  { id: "integrasi", label: "Integrasi" },
+  { id: "admin", label: "Admin" },
+];
 
 const SEMUA: readonly Role[] = ["admin", "manager", "outlet"];
 
@@ -35,18 +46,21 @@ export const NAV: readonly NavItem[] = [
     label: "Dashboard",
     icon: "dashboard",
     roles: SEMUA,
+    section: "laporan",
   },
   {
     href: "/transaksi",
     label: "Transaksi",
     icon: "transaksi",
     roles: SEMUA,
+    section: "laporan",
   },
   {
     href: "/status-sync",
     label: "Status Sync",
     icon: "sync",
     roles: SEMUA,
+    section: "laporan",
   },
   {
     // Data closing ter-scope per outlet di backend, sama seperti transaksi.
@@ -54,43 +68,7 @@ export const NAV: readonly NavItem[] = [
     label: "Closing",
     icon: "closing",
     roles: SEMUA,
-  },
-  {
-    href: "/api-keys",
-    label: "API Key",
-    icon: "kunci",
-    roles: ["admin"],
-  },
-  {
-    // Menentukan event apa yang diterima consumer RabbitMQ — sama sensitifnya
-    // dengan API key, jadi manager pun tidak (TODO 10.4).
-    href: "/product-group",
-    label: "Product Group",
-    icon: "group",
-    roles: ["admin"],
-  },
-  {
-    // Mapping mengubah angka perbandingan semua outlet — sama seperti
-    // mapping product group, hanya admin.
-    href: "/closing-menu",
-    label: "Mapping Closing",
-    icon: "mapping",
-    roles: ["admin"],
-  },
-  {
-    // Payload mentah semua outlet, termasuk pesan yang ditolak — hanya admin,
-    // sama seperti backend /api/closing-messages.
-    href: "/closing-pesan",
-    label: "Pesan RabbitMQ",
-    icon: "pesan",
-    roles: ["admin"],
-  },
-  {
-    // Mengubah irisan laporan semua orang — manager cukup memakai filternya.
-    href: "/brand",
-    label: "Brand",
-    icon: "brand",
-    roles: ["admin"],
+    section: "laporan",
   },
   {
     // Master data dan mapping ProductID POS — sama seperti brand, hanya admin
@@ -99,12 +77,56 @@ export const NAV: readonly NavItem[] = [
     label: "Produk",
     icon: "produk",
     roles: ["admin"],
+    section: "master",
+  },
+  {
+    // Mengubah irisan laporan semua orang — manager cukup memakai filternya.
+    href: "/brand",
+    label: "Brand",
+    icon: "brand",
+    roles: ["admin"],
+    section: "master",
+  },
+  {
+    // Menentukan event apa yang diterima consumer RabbitMQ — sama sensitifnya
+    // dengan API key, jadi manager pun tidak (TODO 10.4).
+    href: "/product-group",
+    label: "Product Group",
+    icon: "group",
+    roles: ["admin"],
+    section: "master",
+  },
+  {
+    // Mapping mengubah angka perbandingan semua outlet — sama seperti
+    // mapping product group, hanya admin.
+    href: "/closing-menu",
+    label: "Mapping Closing",
+    icon: "mapping",
+    roles: ["admin"],
+    section: "integrasi",
+  },
+  {
+    // Payload mentah semua outlet, termasuk pesan yang ditolak — hanya admin,
+    // sama seperti backend /api/closing-messages.
+    href: "/closing-pesan",
+    label: "Pesan RabbitMQ",
+    icon: "pesan",
+    roles: ["admin"],
+    section: "integrasi",
+  },
+  {
+    href: "/api-keys",
+    label: "API Key",
+    icon: "kunci",
+    roles: ["admin"],
+    section: "integrasi",
   },
   {
     href: "/pengguna",
     label: "Pengguna",
     icon: "pengguna",
     roles: ["admin"],
+    section: "admin",
   },
 ];
 

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { SKRIP_AKSEN } from "@/lib/tampilan";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -24,10 +25,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // Kelas tema dan `data-accent` dipasang skrip sebelum hidrasi, jadi
+      // atribut <html> memang berbeda dari hasil render server.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SKRIP_AKSEN }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
-        <Toaster richColors position="top-right" />
+        <Providers>
+          {children}
+          <Toaster richColors position="top-right" />
+        </Providers>
       </body>
     </html>
   );

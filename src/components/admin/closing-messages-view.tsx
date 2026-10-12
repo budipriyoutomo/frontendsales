@@ -35,6 +35,8 @@ import {
   formatTanggal,
   formatTanggalWaktuUtc,
 } from "@/lib/format";
+import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
 
 /** Jeda sebelum pencarian dikirim — satu request per ketikan terlalu boros. */
 const JEDA_CARI_MS = 300;
@@ -77,10 +79,6 @@ export function ClosingMessagesView() {
   const semua = counts
     ? URUTAN_STATUS_PESAN.reduce((n, s) => n + counts[s], 0)
     : undefined;
-  const halaman = Math.floor(offset / LIMIT_LAPORAN) + 1;
-  const totalHalaman = pagination
-    ? Math.max(1, Math.ceil(pagination.total / LIMIT_LAPORAN))
-    : 1;
 
   function pilihStatus(berikutnya: StatusPesan | undefined) {
     setStatus(berikutnya);
@@ -102,20 +100,21 @@ export function ClosingMessagesView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Pesan RabbitMQ
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Setiap pesan closing report yang diterima consumer, termasuk kiriman
-          ulang (duplikat) dan pesan yang ditolak. Pesan yang ditolak tidak
-          tersimpan sebagai laporan dan masuk antrean DLQ; buka detailnya untuk
-          melihat alasan dan JSON aslinya.
-        </p>
-      </div>
+      <PageHeader
+        title="Pesan RabbitMQ"
+        description="Semua pesan closing report yang diterima consumer, termasuk duplikat dan yang ditolak. Buka detail pesan untuk melihat alasan dan JSON aslinya."
+        details={
+          <>
+            <p>
+              Kiriman ulang dicatat sebagai duplikat. Pesan yang ditolak tidak
+              tersimpan sebagai laporan dan masuk antrean DLQ.
+            </p>
+          </>
+        }
+      />
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <div
             role="group"
             aria-label="Saring status pesan"
@@ -260,33 +259,13 @@ export function ClosingMessagesView() {
                 </Table>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-muted-foreground text-sm">
-                  {pagination
-                    ? `Halaman ${halaman} dari ${totalHalaman} · ${formatAngka(pagination.total)} pesan`
-                    : null}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={offset === 0}
-                    onClick={() =>
-                      setOffset(Math.max(0, offset - LIMIT_LAPORAN))
-                    }
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!pagination?.has_more}
-                    onClick={() => setOffset(offset + LIMIT_LAPORAN)}
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
+              <Paginasi
+                offset={offset}
+                limit={LIMIT_LAPORAN}
+                pagination={pagination}
+                satuan="pesan"
+                onPindah={setOffset}
+              />
             </div>
           )}
         </CardContent>

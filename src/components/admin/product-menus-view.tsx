@@ -47,6 +47,7 @@ import type {
   ProductMenuCandidate,
   ProductMenuMapping,
 } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 /** Radix Select tidak menerima value kosong. */
 const SEMUA_GROUP = "__semua__";
@@ -175,22 +176,29 @@ export function ProductMenusView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight">Menu satuan</h2>
-        <p className="text-muted-foreground text-sm">
-          Pilih menu dari group mana pun, lalu tentukan warna colorplate
-          tujuannya dan pengalinya. Contoh: menu PROMO &ldquo;Buy 1 Get 2
-          RED&rdquo; → RED × 2. Saat publish, jumlahnya ditambahkan ke warna
-          itu. Menu tanpa warna aktif tidak dipublish.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Filter outlet hanya untuk mencari menu — ProductID bisa berbeda antar
-          outlet. Menu yang sudah didaftarkan berlaku untuk semua outlet.
-        </p>
-      </div>
+      <PageHeader
+        title="Menu satuan"
+        level={2}
+        description="Konversi menu dari group mana pun ke warna colorplate saat publish."
+        details={
+          <>
+            <p>
+              Pilih menu, lalu tentukan warna colorplate tujuannya dan
+              pengalinya. Contoh: menu PROMO &ldquo;Buy 1 Get 2 RED&rdquo; → RED
+              × 2. Saat publish, jumlahnya ditambahkan ke warna itu. Menu tanpa
+              warna aktif tidak dipublish.
+            </p>
+            <p>
+              Filter outlet hanya untuk mencari menu — ProductID bisa berbeda
+              antar outlet. Menu yang sudah didaftarkan berlaku untuk semua
+              outlet.
+            </p>
+          </>
+        }
+      />
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="menu-outlet">Outlet</Label>
@@ -323,7 +331,7 @@ export function ProductMenusView() {
       </Card>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {daftar.isPending ? (
             <KartuSkeleton baris={3} />
           ) : daftar.isError ? (

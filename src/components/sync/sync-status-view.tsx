@@ -29,6 +29,7 @@ import {
   varianBadge,
   type Kesegaran,
 } from "@/lib/sync-status";
+import { PageHeader } from "@/components/layout/page-header";
 
 const IKON: Record<Kesegaran, typeof CheckCircle2> = {
   segar: CheckCircle2,
@@ -49,16 +50,13 @@ export function SyncStatusView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Status Sync</h1>
-        <p className="text-muted-foreground text-sm">
-          Kapan tiap outlet terakhir mengirim data. Outlet yang diam berarti
-          omzetnya belum masuk laporan.
-        </p>
-      </div>
+      <PageHeader
+        title="Status Sync"
+        description="Kapan tiap outlet terakhir mengirim data. Outlet yang diam berarti omzetnya belum masuk laporan."
+      />
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {query.isPending ? (
             <KartuSkeleton baris={6} />
           ) : query.isError ? (

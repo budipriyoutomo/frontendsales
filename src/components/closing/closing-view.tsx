@@ -38,6 +38,8 @@ import {
 import type { Role } from "@/lib/auth/current-user";
 import type { ClosingComparisonRow } from "@/types/domain";
 import { cn } from "@/lib/utils";
+import { CaraKerja, PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
 
 const TAB_LAPORAN = "laporan";
 const TAB_PERBANDINGAN = "perbandingan";
@@ -68,16 +70,10 @@ export function ClosingView({ role }: { role: Role }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Closing Report
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Laporan closing harian per outlet (terjual, waste, adjustment,
-          kompensasi) yang dikirim sistem closing, dibandingkan dengan penjualan
-          POS.
-        </p>
-      </div>
+      <PageHeader
+        title="Closing Report"
+        description="Laporan closing harian per outlet (terjual, waste, adjustment, kompensasi) yang dikirim sistem closing, dibandingkan dengan penjualan POS."
+      />
 
       <FilterBar role={role} tanpaBrand />
 
@@ -114,16 +110,23 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
 
   return (
     <Card>
-      <CardContent className="space-y-4 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-muted-foreground max-w-3xl text-sm">
-            Satu baris per menu Colorplate per outlet dan tanggal produksi. POS
-            = jumlah qty order detail pada outlet dan tanggal yang sama dari
-            produk POS yang dipetakan ke menu itu. Transaksi POS lain pada
-            outlet dan tanggal yang sama — termasuk produk yang bukan Colorplate
-            — ikut tampil untuk konsolidasi. Total Sold = Colorplate terjual +
-            qty POS; angka yang kosong dihitung 0.
-          </p>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <CaraKerja label="Cara membaca tabel">
+            <p>
+              Satu baris per menu Colorplate per outlet dan tanggal produksi.
+              POS = jumlah qty order detail pada outlet dan tanggal yang sama
+              dari produk POS yang dipetakan ke menu itu.
+            </p>
+            <p>
+              Transaksi POS lain pada outlet dan tanggal yang sama — termasuk
+              produk yang bukan Colorplate — ikut tampil untuk konsolidasi.
+            </p>
+            <p>
+              Total Sold = Colorplate terjual + qty POS; angka yang kosong
+              dihitung 0.
+            </p>
+          </CaraKerja>
 
           <div className="flex items-center gap-2">
             <Switch
@@ -329,14 +332,10 @@ function DaftarLaporan({ filter }: { filter: Filter }) {
 
   const baris = query.data?.data ?? [];
   const pagination = query.data?.pagination;
-  const halaman = Math.floor(offset / LIMIT_LAPORAN) + 1;
-  const totalHalaman = pagination
-    ? Math.max(1, Math.ceil(pagination.total / LIMIT_LAPORAN))
-    : 1;
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent>
         {query.isPending ? (
           <KartuSkeleton baris={6} />
         ) : query.isError ? (
@@ -402,31 +401,13 @@ function DaftarLaporan({ filter }: { filter: Filter }) {
               </Table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-muted-foreground text-sm">
-                {pagination
-                  ? `Halaman ${halaman} dari ${totalHalaman} · ${formatAngka(pagination.total)} laporan`
-                  : null}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - LIMIT_LAPORAN))}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!pagination?.has_more}
-                  onClick={() => setOffset(offset + LIMIT_LAPORAN)}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+            <Paginasi
+              offset={offset}
+              limit={LIMIT_LAPORAN}
+              pagination={pagination}
+              satuan="laporan"
+              onPindah={setOffset}
+            />
           </div>
         )}
       </CardContent>

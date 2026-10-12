@@ -30,6 +30,7 @@ import { ClosingMenuMappingDialog } from "@/components/admin/closing-menu-mappin
 import { useClosingMenus, type StatusMenu } from "@/hooks/use-closing";
 import { formatTanggalWaktuUtc } from "@/lib/format";
 import type { ClosingMenu } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 /** Jeda sebelum pencarian dikirim — satu request per ketikan terlalu boros. */
 const JEDA_CARI_MS = 300;
@@ -71,25 +72,28 @@ export function ClosingMenusView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Mapping Menu Closing
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Menu di closing report berasal dari sistem closing, bukan ProductID
-          POS. Petakan setiap menu ke produk POS-nya — untuk sushi biasanya
-          produk warna piring (mis. RED). Beberapa menu boleh dipetakan ke
-          produk yang sama; di laporan perbandingan semuanya dijumlah lalu
-          dibandingkan dengan qty produk itu.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Pengali = berapa unit produk POS untuk 1 porsi menu. Umumnya 1; menu
-          yang disajikan di 2 piring → pengali 2.
-        </p>
-      </div>
+      <PageHeader
+        title="Mapping Menu Closing"
+        description="Petakan setiap menu closing report ke produk POS-nya supaya bisa dibandingkan dengan penjualan POS."
+        details={
+          <>
+            <p>
+              Menu di closing report berasal dari sistem closing, bukan
+              ProductID POS. Untuk sushi biasanya dipetakan ke produk warna
+              piring (mis. RED). Beberapa menu boleh dipetakan ke produk yang
+              sama; di laporan perbandingan semuanya dijumlah lalu dibandingkan
+              dengan qty produk itu.
+            </p>
+            <p>
+              Pengali = berapa unit produk POS untuk 1 porsi menu. Umumnya 1;
+              menu yang disajikan di 2 piring → pengali 2.
+            </p>
+          </>
+        }
+      />
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="closing-menu-status">Status</Label>

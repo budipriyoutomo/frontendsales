@@ -45,6 +45,7 @@ import {
   validasiNamaBrand,
 } from "@/lib/brand";
 import type { Brand, OutletBrand } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 /** Nilai sentinel — `Select` tidak menerima item bernilai string kosong. */
 const TANPA_BRAND = "__tanpa__";
@@ -188,21 +189,23 @@ export function BrandsView() {
   return (
     <div className="space-y-10">
       <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Brand</h1>
-          <p className="text-muted-foreground text-sm">
-            Brand mengelompokkan outlet. Laporan dashboard dan transaksi bisa
-            difilter per brand; satu outlet hanya bisa masuk satu brand.
-          </p>
-          <p className="text-muted-foreground text-sm">
-            Brand tidak bisa dihapus dan kodenya tidak bisa diganti — kode
-            dipakai di tautan laporan yang sudah dibagikan. Brand yang tidak
-            dipakai lagi cukup dinonaktifkan.
-          </p>
-        </div>
+        <PageHeader
+          title="Brand"
+          description="Kelompok outlet untuk menyaring laporan dashboard dan transaksi."
+          details={
+            <>
+              <p>Satu outlet hanya bisa masuk satu brand.</p>
+              <p>
+                Brand tidak bisa dihapus dan kodenya tidak bisa diganti — kode
+                dipakai di tautan laporan yang sudah dibagikan. Brand yang tidak
+                dipakai lagi cukup dinonaktifkan.
+              </p>
+            </>
+          }
+        />
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             <form
               className="flex flex-wrap items-start gap-3"
               onSubmit={kirim}
@@ -287,7 +290,7 @@ export function BrandsView() {
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             {brands.isPending ? (
               <KartuSkeleton baris={3} />
             ) : brands.isError ? (
@@ -354,19 +357,23 @@ export function BrandsView() {
       </div>
 
       <div className="space-y-6">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight">
-            Outlet per brand
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Daftar outlet diambil dari API key. Mengganti brand sebuah outlet
-            langsung mengubah laporan yang difilter per brand — termasuk untuk
-            tanggal yang sudah lewat. Hanya brand aktif yang bisa dipilih.
-          </p>
-        </div>
+        <PageHeader
+          title="Outlet per brand"
+          level={2}
+          description="Atur brand tiap outlet. Hanya brand aktif yang bisa dipilih."
+          details={
+            <>
+              <p>
+                Daftar outlet diambil dari API key. Mengganti brand sebuah
+                outlet langsung mengubah laporan yang difilter per brand —
+                termasuk untuk tanggal yang sudah lewat.
+              </p>
+            </>
+          }
+        />
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             {outlets.isPending ? (
               <KartuSkeleton baris={4} />
             ) : outlets.isError ? (

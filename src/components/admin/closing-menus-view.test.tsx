@@ -200,7 +200,11 @@ describe("ClosingMenusView — daftar", () => {
   });
 
   it("penjelasan pengali memakai unit POS per porsi", async () => {
+    const user = userEvent.setup();
     renderWithQuery(<ClosingMenusView />);
+
+    // Penjelasan lengkap ada di balik "Cara kerja" (tertutup secara default).
+    await user.click(screen.getByText("Cara kerja"));
 
     expect(
       await screen.findByText(/berapa unit produk POS untuk 1 porsi menu/i),

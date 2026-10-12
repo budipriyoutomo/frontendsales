@@ -81,6 +81,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Warna deret grafik; ikut warna aksen kalau aksen dipilih. */
+  --chart-accent: #2a78d6;
 }
 
 .dark {
@@ -115,6 +117,104 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --chart-accent: #3987e5;
+}
+
+/*
+ * Warna aksen pilihan user (halaman Pengaturan), dipasang sebagai
+ * `data-accent` di <html>. Tanpa atribut = netral (bawaan di atas).
+ * Tiap pasangan sudah dicek: teks di atas tombol >= 4.5:1, dan warna
+ * grafik >= 3:1 terhadap kartu terang maupun gelap.
+ */
+
+/* Merah bata */
+:root[data-accent="merah"] {
+  --primary: oklch(0.52 0.17 33);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.52 0.17 33);
+  --sidebar-primary: oklch(0.52 0.17 33);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-accent: oklch(0.52 0.17 33);
+}
+:root.dark[data-accent="merah"] {
+  --primary: oklch(0.7 0.15 35);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.7 0.15 35);
+  --sidebar-primary: oklch(0.7 0.15 35);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-accent: oklch(0.7 0.15 35);
+}
+
+/* Oranye */
+:root[data-accent="oranye"] {
+  --primary: oklch(0.55 0.16 50);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.55 0.16 50);
+  --sidebar-primary: oklch(0.55 0.16 50);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-accent: oklch(0.55 0.16 50);
+}
+:root.dark[data-accent="oranye"] {
+  --primary: oklch(0.75 0.15 60);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.75 0.15 60);
+  --sidebar-primary: oklch(0.75 0.15 60);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-accent: oklch(0.75 0.15 60);
+}
+
+/* Hijau */
+:root[data-accent="hijau"] {
+  --primary: oklch(0.5 0.11 160);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.5 0.11 160);
+  --sidebar-primary: oklch(0.5 0.11 160);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-accent: oklch(0.5 0.11 160);
+}
+:root.dark[data-accent="hijau"] {
+  --primary: oklch(0.72 0.13 160);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.72 0.13 160);
+  --sidebar-primary: oklch(0.72 0.13 160);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-accent: oklch(0.72 0.13 160);
+}
+
+/* Biru */
+:root[data-accent="biru"] {
+  --primary: oklch(0.5 0.17 258);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.5 0.17 258);
+  --sidebar-primary: oklch(0.5 0.17 258);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-accent: oklch(0.5 0.17 258);
+}
+:root.dark[data-accent="biru"] {
+  --primary: oklch(0.7 0.14 255);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.7 0.14 255);
+  --sidebar-primary: oklch(0.7 0.14 255);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-accent: oklch(0.7 0.14 255);
+}
+
+/* Ungu */
+:root[data-accent="ungu"] {
+  --primary: oklch(0.5 0.19 295);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.5 0.19 295);
+  --sidebar-primary: oklch(0.5 0.19 295);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-accent: oklch(0.5 0.19 295);
+}
+:root.dark[data-accent="ungu"] {
+  --primary: oklch(0.72 0.14 295);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.72 0.14 295);
+  --sidebar-primary: oklch(0.72 0.14 295);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-accent: oklch(0.72 0.14 295);
 }
 
 @layer base {

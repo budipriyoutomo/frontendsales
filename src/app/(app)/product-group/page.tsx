@@ -1,7 +1,7 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { ProductGroupsView } from "@/components/admin/product-groups-view";
-import { ProductMenusView } from "@/components/admin/product-menus-view";
+import { ProductGroupTabs } from "@/components/admin/product-group-tabs";
 import { RequireRole } from "@/components/auth/require-role";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { PATHNAME_HEADER } from "@/proxy";
@@ -16,10 +16,10 @@ export default async function ProductGroupPage() {
 
   return (
     <RequireRole user={user} izinkan={["admin"]}>
-      <div className="space-y-10">
-        <ProductGroupsView />
-        <ProductMenusView />
-      </div>
+      {/* `useSearchParams` (tab di URL) butuh batas Suspense. */}
+      <Suspense fallback={null}>
+        <ProductGroupTabs />
+      </Suspense>
     </RequireRole>
   );
 }

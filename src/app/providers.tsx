@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { ApiError } from "@/lib/api/client";
 
 let browserQueryClient: QueryClient | undefined;
@@ -34,8 +35,16 @@ function getQueryClient() {
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={getQueryClient()}>
-      {children}
-    </QueryClientProvider>
+    // Tema terang/gelap: kelas `.dark` di <html>, default ikut sistem.
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <QueryClientProvider client={getQueryClient()}>
+        {children}
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

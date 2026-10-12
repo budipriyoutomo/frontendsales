@@ -23,9 +23,9 @@ import type { DailyRow } from "@/types/domain";
 const config = {
   total_amount: {
     label: "Omzet",
-    // Dua langkah biru yang sudah divalidasi terhadap permukaan kartu terang
-    // (#ffffff) dan gelap (#171717) — keduanya lolos kontras >= 3:1.
-    theme: { light: "#2a78d6", dark: "#3987e5" },
+    // Token di globals.css: biru bawaan atau warna aksen pilihan user,
+    // masing-masing sudah dicek kontras >= 3:1 di kartu terang dan gelap.
+    color: "var(--chart-accent)",
   },
 } satisfies ChartConfig;
 

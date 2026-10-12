@@ -17,6 +17,7 @@ import {
 } from "@/lib/product-group";
 import { bolehLihatPemilihOutlet } from "@/lib/auth/access";
 import type { Role } from "@/lib/auth/current-user";
+import { PageHeader } from "@/components/layout/page-header";
 
 export function DashboardView({ role }: { role: Role }) {
   const router = useRouter();
@@ -48,12 +49,10 @@ export function DashboardView({ role }: { role: Role }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">
-          Ringkasan penjualan untuk rentang tanggal yang dipilih.
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Ringkasan penjualan untuk rentang tanggal yang dipilih."
+      />
 
       {/* Satu baris filter untuk seluruh halaman, di atas semua kartu. */}
       <FilterBar role={role} />

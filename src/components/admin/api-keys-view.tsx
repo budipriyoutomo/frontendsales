@@ -27,6 +27,7 @@ import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
 import { formatTanggalWaktuUtc } from "@/lib/format";
 import type { ApiKey } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 type KeyBaru = { outletCode: string; apiKey: string };
 type Konfirmasi = { aksi: "rotate" | "revoke"; outletCode: string };
@@ -117,17 +118,13 @@ export function ApiKeysView() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">API Key</h1>
-        <p className="text-muted-foreground text-sm">
-          Kunci yang dipakai mesin POS tiap outlet untuk mengirim transaksi.
-          Daftar ini hanya menampilkan awalan key — nilai penuhnya tidak
-          disimpan di server.
-        </p>
-      </div>
+      <PageHeader
+        title="API Key"
+        description="Kunci yang dipakai mesin POS tiap outlet untuk mengirim transaksi. Daftar ini hanya menampilkan awalan key — nilai penuhnya tidak disimpan di server."
+      />
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
@@ -158,7 +155,7 @@ export function ApiKeysView() {
       </Card>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {daftar.isPending ? (
             <KartuSkeleton baris={5} />
           ) : daftar.isError ? (

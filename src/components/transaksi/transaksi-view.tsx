@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,11 +26,12 @@ import { SaleDetailDialog } from "@/components/transaksi/sale-detail-dialog";
 import { LIMIT_DEFAULT, useSalesList } from "@/hooks/use-transaksi";
 import { api } from "@/lib/api/browser";
 import { bacaFilter, filterKeQuery, filterKeSearchParams } from "@/lib/filter";
-import { formatAngka, formatRupiah, formatTanggal } from "@/lib/format";
+import { formatRupiah, formatTanggal } from "@/lib/format";
 import { transaksiVoid } from "@/lib/transaksi";
 import type { Role } from "@/lib/auth/current-user";
 import { unduhResponse } from "@/lib/download";
 import { ApiError } from "@/lib/api/client";
+import { Paginasi } from "@/components/layout/paginasi";
 
 export function TransaksiView({ role }: { role: Role }) {
   const router = useRouter();
@@ -86,31 +88,24 @@ export function TransaksiView({ role }: { role: Role }) {
   }
 
   const baris = query.data?.data ?? [];
-  const halaman = Math.floor(offset / LIMIT_DEFAULT) + 1;
-  const totalHalaman = pagination
-    ? Math.max(1, Math.ceil(pagination.total / LIMIT_DEFAULT))
-    : 1;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Transaksi</h1>
-          <p className="text-muted-foreground text-sm">
-            Daftar struk pada rentang tanggal yang dipilih.
-          </p>
-        </div>
-
-        <Button variant="outline" onClick={ekspor} disabled={mengekspor}>
-          <Download aria-hidden className="size-4" />
-          {mengekspor ? "Menyiapkan…" : "Ekspor CSV"}
-        </Button>
-      </div>
+      <PageHeader
+        title="Transaksi"
+        description="Daftar struk pada rentang tanggal yang dipilih."
+        actions={
+          <Button variant="outline" onClick={ekspor} disabled={mengekspor}>
+            <Download aria-hidden className="size-4" />
+            {mengekspor ? "Menyiapkan…" : "Ekspor CSV"}
+          </Button>
+        }
+      />
 
       <FilterBar role={role} />
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {query.isPending ? (
             <KartuSkeleton baris={8} />
           ) : query.isError ? (
@@ -183,36 +178,13 @@ export function TransaksiView({ role }: { role: Role }) {
                 </Table>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-muted-foreground text-sm">
-                  {pagination
-                    ? `Halaman ${halaman} dari ${totalHalaman} · ${formatAngka(pagination.total)} transaksi`
-                    : null}
-                </p>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={offset === 0}
-                    onClick={() =>
-                      pindahKe(Math.max(0, offset - LIMIT_DEFAULT))
-                    }
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    // `has_more` datang dari server — jangan dihitung sendiri
-                    // dari panjang array, itu meleset di halaman terakhir.
-                    disabled={!pagination?.has_more}
-                    onClick={() => pindahKe(offset + LIMIT_DEFAULT)}
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
+              <Paginasi
+                offset={offset}
+                limit={LIMIT_DEFAULT}
+                pagination={pagination}
+                satuan="transaksi"
+                onPindah={pindahKe}
+              />
             </div>
           )}
         </CardContent>

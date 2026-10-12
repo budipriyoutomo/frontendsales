@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   NAV,
+  NAV_SECTIONS,
   bolehLihatPemilihOutlet,
   bolehMasukHalaman,
   navUntukRole,
@@ -31,6 +32,22 @@ describe("navUntukRole (3.2, 3.7)", () => {
     const menu = label("outlet");
 
     expect(menu).toEqual(["Dashboard", "Transaksi", "Status Sync", "Closing"]);
+  });
+
+  it("menu satu kelompok berdampingan, urut sesuai NAV_SECTIONS", () => {
+    // Sidebar merender per kelompok; urutan NAV harus sudah sama supaya
+    // urutan di sidebar dan urutan di array tidak diam-diam berbeda.
+    const urutan = NAV_SECTIONS.map((s) => s.id);
+    const indeks = NAV.map((n) => urutan.indexOf(n.section));
+
+    expect(indeks.every((i) => i >= 0)).toBe(true);
+    expect(indeks).toEqual([...indeks].sort((a, b) => a - b));
+  });
+
+  it("role outlet hanya punya kelompok laporan", () => {
+    expect(new Set(navUntukRole("outlet").map((n) => n.section))).toEqual(
+      new Set(["laporan"]),
+    );
   });
 });
 

@@ -46,6 +46,7 @@ import {
   type GalatForm,
 } from "@/lib/user-guard";
 import type { UserAdmin } from "@/types/domain";
+import { PageHeader } from "@/components/layout/page-header";
 
 const ROLE = ["admin", "manager", "outlet"] as const;
 
@@ -151,15 +152,13 @@ export function UsersView({ sayaId }: { sayaId: number }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Pengguna</h1>
-        <p className="text-muted-foreground text-sm">
-          Akun yang bisa masuk ke dashboard ini.
-        </p>
-      </div>
+      <PageHeader
+        title="Pengguna"
+        description="Akun yang bisa masuk ke dashboard ini."
+      />
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <form onSubmit={kirimBuat} className="space-y-4" noValidate>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <Field
@@ -227,7 +226,7 @@ export function UsersView({ sayaId }: { sayaId: number }) {
       </Card>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           {daftar.isPending ? (
             <KartuSkeleton baris={5} />
           ) : daftar.isError ? (
