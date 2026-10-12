@@ -846,7 +846,7 @@ export interface paths {
         put?: never;
         /**
          * Import Products
-         * @description Buat produk `BRAND-ProductID` (atau tambah outlet ke produk itu) dari penjualan.
+         * @description Buat produk berkode ProductID POS (atau tambah outlet ke produk itu) dari penjualan.
          *
          *     Item yang tidak bisa diimpor dilewati dengan alasannya; yang lain tetap tersimpan.
          */

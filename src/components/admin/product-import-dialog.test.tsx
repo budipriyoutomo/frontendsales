@@ -31,7 +31,7 @@ function kandidat(
     last_sale_date: "2026-01-15",
     outlet_codes: ["OUT1", "OUT2"],
     unmapped_outlet_codes: ["OUT1", "OUT2"],
-    proposed_code: `${brand_code}-${pos_product_id}`,
+    proposed_code: String(pos_product_id),
     status: "baru",
     existing_product_id: null,
     reason: null,
@@ -68,7 +68,11 @@ beforeEach(() => {
   toastSuccess.mockClear();
   permintaan = [];
   daftar = [
-    kandidat("MHR", 101, { unmapped_outlet_codes: ["OUT2"] }),
+    kandidat("MHR", 101, {
+      unmapped_outlet_codes: ["OUT2"],
+      reason:
+        "ProductID 101 juga dijual brand XYZ — hanya brand yang diimpor lebih dulu yang mendapat produk ini",
+    }),
     kandidat("MHR", 202, {
       pos_product_name: "Birthday Cake",
       status: "tambah_outlet",
@@ -77,7 +81,7 @@ beforeEach(() => {
     kandidat("XYZ", 101, {
       pos_product_name: "Red XYZ",
       status: "bentrok",
-      reason: "Produk XYZ-101 sudah ada tetapi nonaktif",
+      reason: "Produk 101 sudah ada dengan brand lain",
     }),
   ];
   server.use(
@@ -109,25 +113,35 @@ describe("ProductImportDialog", () => {
   it("menampilkan kandidat per brand + ProductID dengan hasil yang akan dibuat", async () => {
     const { dialog } = await bukaDialog();
 
-    const baru = within(dialog).getByText("MHR-101").closest("tr")!;
+    // ProductID & Product Code = ProductID POS apa adanya, tanpa awalan brand.
+    const baru = within(dialog).getByText("Red").closest("tr")!;
+    expect(within(baru).getAllByText("101")).toHaveLength(2);
+    expect(within(baru).queryByText(/MHR-/)).not.toBeInTheDocument();
     expect(within(baru).getByText("Produk baru")).toBeVisible();
+    expect(
+      within(baru).getByText(/ProductID 101 juga dijual brand XYZ/),
+    ).toBeVisible();
     expect(within(baru).getByText("OUT2")).toBeVisible();
     expect(
       within(baru).getByText("1 outlet lain sudah dipetakan"),
     ).toBeVisible();
     expect(within(baru).getByText("COLORPLATE / SUSHI")).toBeVisible();
 
-    const tambah = within(dialog).getByText("MHR-202").closest("tr")!;
+    const tambah = within(dialog).getByText("Birthday Cake").closest("tr")!;
     expect(
       within(tambah).getByText("Tambah outlet ke produk yang sudah ada"),
     ).toBeVisible();
 
-    const bentrok = within(dialog).getByText("XYZ-101").closest("tr")!;
+    const bentrok = within(dialog).getByText("Red XYZ").closest("tr")!;
     expect(
-      within(bentrok).getByText(/Tidak bisa diimpor: Produk XYZ-101/),
+      within(bentrok).getByText(
+        "Tidak bisa diimpor: Produk 101 sudah ada dengan brand lain",
+      ),
     ).toBeVisible();
     expect(
-      within(bentrok).getByRole("checkbox", { name: "Pilih XYZ-101" }),
+      within(bentrok).getByRole("checkbox", {
+        name: "Pilih XYZ ProductID 101",
+      }),
     ).toBeDisabled();
   });
 
@@ -200,7 +214,7 @@ describe("ProductImportDialog", () => {
     const { user, dialog } = await bukaDialog();
 
     await user.click(
-      within(dialog).getByRole("checkbox", { name: "Pilih MHR-101" }),
+      within(dialog).getByRole("checkbox", { name: "Pilih MHR ProductID 101" }),
     );
     await user.click(within(dialog).getByRole("button", { name: "Impor (1)" }));
 

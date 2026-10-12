@@ -53,8 +53,8 @@ function bisaDiimpor(c: ImportCandidate) {
  * Ambil master data produk dari transaksi POS.
  *
  * Satu baris = satu (brand, ProductID POS): outlet-outlet satu brand yang
- * menjual ProductID yang sama digabung jadi satu produk `BRAND-ProductID`
- * (ProductID & Product Code), Group → Kategori, Dept → Subkategori, lalu
+ * menjual ProductID yang sama digabung jadi satu produk berkode ProductID POS
+ * apa adanya (ProductID & Product Code), Group → Kategori, Dept → Subkategori, lalu
  * semua outlet itu langsung dipetakan. Hanya outlet yang sudah punya brand
  * yang ikut.
  */
@@ -171,10 +171,11 @@ export function ProductImportDialog({
           <DialogTitle>Ambil dari transaksi</DialogTitle>
           <DialogDescription>
             Produk POS yang belum dipetakan, digabung per brand dan ProductID.
-            Produk dibuat dengan ProductID dan Product Code{" "}
-            <code className="font-mono">BRAND-ProductID</code>, Group menjadi
-            Kategori, dan Dept menjadi Subkategori. Semua outlet brand itu
-            langsung dipetakan. Hanya outlet yang sudah punya brand yang ikut.
+            ProductID dan Product Code produk diambil apa adanya dari ProductID
+            di transaksi, Group menjadi Kategori, dan Dept menjadi Subkategori.
+            Semua outlet brand itu langsung dipetakan. Hanya outlet yang sudah
+            punya brand yang ikut. ProductID yang sama di dua brand hanya bisa
+            menjadi satu produk.
           </DialogDescription>
         </DialogHeader>
 
@@ -271,7 +272,7 @@ export function ProductImportDialog({
                         <input
                           type="checkbox"
                           className="accent-primary size-4"
-                          aria-label={`Pilih ${c.proposed_code}`}
+                          aria-label={`Pilih ${c.brand_code} ProductID ${c.pos_product_id}`}
                           checked={dipilih.has(kunci(c))}
                           disabled={!bisaDiimpor(c)}
                           onChange={(e) => ubahPilih(c, e.target.checked)}
@@ -303,9 +304,16 @@ export function ProductImportDialog({
                           {c.proposed_code}
                         </div>
                         {c.status === "baru" ? (
-                          <div className="text-muted-foreground text-xs">
-                            Produk baru
-                          </div>
+                          <>
+                            <div className="text-muted-foreground text-xs">
+                              Produk baru
+                            </div>
+                            {c.reason ? (
+                              <div className="text-xs text-amber-800 dark:text-amber-400">
+                                {c.reason}
+                              </div>
+                            ) : null}
+                          </>
                         ) : c.status === "tambah_outlet" ? (
                           <div className="text-muted-foreground text-xs">
                             Tambah outlet ke produk yang sudah ada
