@@ -405,3 +405,74 @@ describe("ClosingView — daftar laporan", () => {
     expect(within(dialog).getByText("Aktif")).toBeVisible();
   });
 });
+
+describe("ClosingView — kirim ke API", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              outlet_code: "STTSM",
+              production_date: "2026-10-02",
+              status: "belum_dikirim",
+              can_send: true,
+              item_count: 4,
+              total_sold: 98,
+              menu_belum_dipetakan: [],
+              produk_dobel: [],
+              last_attempt: null,
+              last_sent: null,
+            },
+          ],
+        }),
+      ),
+      http.get("/api/closing-exports", () =>
+        HttpResponse.json({
+          success: true,
+          data: [],
+          pagination: { limit: 50, offset: 0, total: 0, has_more: false },
+        }),
+      ),
+    );
+  });
+
+  it("tab hanya untuk admin", async () => {
+    const { unmount } = renderWithQuery(<ClosingView role="admin" />);
+    expect(
+      screen.getByRole("tab", { name: /kirim ke api/i }),
+    ).toBeInTheDocument();
+    unmount();
+
+    renderWithQuery(<ClosingView role="manager" />);
+    expect(screen.queryByRole("tab", { name: /kirim ke api/i })).toBeNull();
+  });
+
+  it("tab tersimpan di URL", async () => {
+    renderWithQuery(<ClosingView role="admin" />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("tab", { name: /kirim ke api/i }));
+
+    expect(urlTerakhir().get("tab")).toBe("kirim");
+    expect(urlTerakhir().get("start_date")).toBe("2026-10-01");
+  });
+
+  it("?tab=kirim membuka panel kirim", async () => {
+    searchParams.set("tab", "kirim");
+    renderWithQuery(<ClosingView role="admin" />);
+
+    expect(
+      await screen.findByRole("table", { name: /status kirim/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("?tab=kirim untuk non-admin kembali ke perbandingan", async () => {
+    searchParams.set("tab", "kirim");
+    renderWithQuery(<ClosingView role="outlet" />);
+
+    expect(await screen.findByText("Salmon Nigiri")).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: /status kirim/i })).toBeNull();
+  });
+});

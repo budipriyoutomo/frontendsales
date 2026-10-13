@@ -56,6 +56,25 @@ export const URUTAN_STATUS_PESAN: readonly StatusPesan[] = [
   "ditolak",
 ];
 
+/**
+ * Status kirim rekap ke API eksternal per outlet × tanggal produksi
+ * (`/api/closing-exports/status`, backend Fase 8) — dibanding kiriman
+ * terakhir yang sampai.
+ */
+export const STATUS_KIRIM = {
+  belum_dikirim: { label: "Belum dikirim", nada: "netral" },
+  terkirim: { label: "Terkirim", nada: "baik" },
+  perlu_kirim_ulang: { label: "Perlu kirim ulang", nada: "peringatan" },
+} as const;
+
+/** Status satu kiriman (`/api/closing-exports`). `duplikat` = sudah ada di API tujuan. */
+export const STATUS_LOG_KIRIM = {
+  mengirim: { label: "Mengirim", nada: "peringatan" },
+  terkirim: { label: "Terkirim", nada: "baik" },
+  duplikat: { label: "Sudah ada", nada: "baik" },
+  gagal: { label: "Gagal", nada: "buruk" },
+} as const;
+
 /** `["data", "items", 0, "sold"]` → `data.items[0].sold` (lokasi error Pydantic). */
 export function formatLokasiError(loc: unknown): string {
   if (!Array.isArray(loc) || loc.length === 0) return "(pesan)";

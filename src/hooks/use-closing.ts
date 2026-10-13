@@ -1,11 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/browser";
 import type { StatusPesan } from "@/lib/closing";
 import type { Filter } from "@/lib/filter";
 import type {
   ClosingComparisonRow,
+  ClosingExportDetail,
+  ClosingExportStatus,
+  ClosingExportSummary,
   ClosingMenu,
   ClosingMessageCounts,
   ClosingMessageDetail,
@@ -121,5 +124,77 @@ export function useClosingMessage(id: number | null) {
     enabled: id !== null,
     queryFn: () =>
       api.request<ClosingMessageDetail>(`/api/closing-messages/${id}`),
+  });
+}
+
+/**
+ * Kirim rekap closing ke API eksternal (backend Fase 8, admin saja). Filter
+ * tanggal = tanggal produksi.
+ */
+export function useClosingExportStatus(filter: Filter) {
+  return useQuery({
+    queryKey: ["closing-export-status", queryFilter(filter)],
+    placeholderData: (sebelumnya) => sebelumnya,
+    queryFn: () =>
+      api.request<ClosingExportStatus[]>("/api/closing-exports/status", {
+        query: queryFilter(filter),
+      }),
+  });
+}
+
+export function useClosingExports(filter: Filter, offset: number) {
+  return useQuery({
+    queryKey: ["closing-exports", queryFilter(filter), offset],
+    placeholderData: (sebelumnya) => sebelumnya,
+    queryFn: () =>
+      api.requestWithMeta<ClosingExportSummary[]>("/api/closing-exports", {
+        query: { ...queryFilter(filter), limit: LIMIT_LAPORAN, offset },
+      }),
+  });
+}
+
+export function useClosingExport(id: number | null) {
+  return useQuery({
+    queryKey: ["closing-export", id],
+    enabled: id !== null,
+    queryFn: () =>
+      api.request<ClosingExportDetail>(`/api/closing-exports/${id}`),
+  });
+}
+
+function useSegarkanKiriman() {
+  const qc = useQueryClient();
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["closing-export-status"] }),
+      qc.invalidateQueries({ queryKey: ["closing-exports"] }),
+      qc.invalidateQueries({ queryKey: ["closing-export"] }),
+    ]);
+}
+
+/**
+ * Kiriman yang gagal di API tujuan tetap sukses di sisi backend (201,
+ * `status: gagal`) — pemanggil memeriksa `status` hasilnya.
+ */
+export function useKirimClosing() {
+  const segarkan = useSegarkanKiriman();
+  return useMutation({
+    mutationFn: (body: { outlet_code: string; production_date: string }) =>
+      api.request<ClosingExportDetail>("/api/closing-exports", {
+        method: "POST",
+        body,
+      }),
+    onSettled: () => segarkan(),
+  });
+}
+
+export function useUlangiKirimClosing() {
+  const segarkan = useSegarkanKiriman();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.request<ClosingExportDetail>(`/api/closing-exports/${id}/retry`, {
+        method: "POST",
+      }),
+    onSettled: () => segarkan(),
   });
 }

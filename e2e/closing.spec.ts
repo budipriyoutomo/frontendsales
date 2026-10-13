@@ -148,3 +148,60 @@ test.describe("Closing report (11.6)", () => {
     await expect(page.getByText("pesan-rusak-001")).toHaveCount(0);
   });
 });
+
+test.describe("Kirim rekap closing ke API (backend Fase 8)", () => {
+  test("admin mengirim rekap satu outlet, lalu melihat payload di riwayat", async ({
+    page,
+  }) => {
+    await masuk(page, "admin");
+    // Menu SU-001 harus terpetakan supaya OUTLET_001 tidak diblokir; 409 =
+    // sudah dipetakan oleh test lain / run sebelumnya.
+    // Lewat fetch dari halaman — jalur BFF yang sama dengan aplikasi.
+    const kode = await page.evaluate(async () => {
+      const res = await fetch("/api/closing-menus/1/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: 200104, multiplier: 1 }),
+      });
+      return res.status;
+    });
+    expect([201, 409]).toContain(kode);
+
+    await page.goto("/closing?tab=kirim");
+    const status = page.getByRole("table", { name: /status kirim/i });
+    const baris = status.getByRole("row").filter({ hasText: "OUTLET_001" });
+    // Salmon 42 + 42, Tuna 12 + 10, Es Teh 0 + 15.
+    await expect(baris.getByRole("cell").nth(3)).toHaveText("121");
+
+    await baris.getByRole("button", { name: /^kirim/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("OUTLET_001")).toBeVisible();
+    await dialog.getByRole("button", { name: /^kirim$/i }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect(baris.getByRole("cell").nth(4)).toHaveText(/^Terkirim/);
+
+    const riwayat = page.getByRole("table", { name: /riwayat kiriman/i });
+    const terbaru = riwayat.getByRole("row").nth(1);
+    await expect(terbaru).toContainText("OUTLET_001");
+    await expect(terbaru).toContainText("admin@maharasa.test");
+    await terbaru.getByRole("button", { name: "Detail" }).click();
+
+    const detail = page.getByRole("dialog");
+    await expect(detail.getByText('{"received":true}')).toBeVisible();
+    await expect(detail.locator("pre").last()).toContainText('"totalSold": 84');
+  });
+
+  test("tab kirim hanya untuk admin", async ({ page }) => {
+    await masuk(page, "manager");
+    await page.goto("/closing?tab=kirim");
+
+    await expect(barisMenu(page, "OUTLET_001", "Salmon Nigiri")).toBeVisible();
+    await expect(page.getByRole("tab", { name: /kirim ke api/i })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("table", { name: /status kirim/i }),
+    ).toHaveCount(0);
+  });
+});

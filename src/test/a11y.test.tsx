@@ -14,6 +14,7 @@ import { GroupRecap } from "@/components/dashboard/group-recap";
 import { ClosingView } from "@/components/closing/closing-view";
 import { ClosingMenusView } from "@/components/admin/closing-menus-view";
 import { ClosingMessagesView } from "@/components/admin/closing-messages-view";
+import { ClosingExportPanel } from "@/components/closing/closing-export-panel";
 
 /**
  * Cek aksesibilitas dasar (TODO 8.7).
@@ -205,6 +206,64 @@ describe("Aksesibilitas dasar (8.7)", () => {
 
     const { container } = renderWithQuery(<ClosingView role="admin" />);
     await screen.findByText("Salmon Nigiri");
+
+    expect(await periksa(container)).toEqual([]);
+  });
+
+  it("panel kirim rekap closing ke API bebas pelanggaran", async () => {
+    const kiriman = {
+      id: 1,
+      outlet_code: "OUT1",
+      production_date: "2026-09-12",
+      sequence: 1,
+      message_id: "6f1c2a7e-3b4d-4e8f-9a10-2b3c4d5e6f70",
+      status: "gagal",
+      attempts: 3,
+      http_status: 503,
+      error: "HTTP 503",
+      item_count: 2,
+      sent_by: "admin@maharasa.id",
+      created_at: "2026-09-13T01:00:00",
+      started_at: "2026-09-13T01:00:00",
+      finished_at: "2026-09-13T01:00:05",
+    };
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              outlet_code: "OUT1",
+              production_date: "2026-09-12",
+              status: "perlu_kirim_ulang",
+              can_send: false,
+              item_count: 2,
+              total_sold: 8,
+              menu_belum_dipetakan: [
+                { menu_id: "a", menu_code: "SU-009", menu_name: "Uni" },
+              ],
+              produk_dobel: [],
+              last_attempt: kiriman,
+              last_sent: { ...kiriman, status: "terkirim", http_status: 201 },
+            },
+          ],
+        }),
+      ),
+      http.get("/api/closing-exports", () =>
+        HttpResponse.json({
+          success: true,
+          data: [kiriman],
+          pagination: { limit: 50, offset: 0, total: 1, has_more: false },
+        }),
+      ),
+    );
+
+    const { container } = renderWithQuery(
+      <ClosingExportPanel
+        filter={{ start_date: "2026-09-12", end_date: "2026-09-12" }}
+      />,
+    );
+    await screen.findByRole("table", { name: /riwayat kiriman/i });
 
     expect(await periksa(container)).toEqual([]);
   });

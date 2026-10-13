@@ -1072,6 +1072,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/closing-exports/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Closing Export Status
+         * @description Status kirim setiap outlet × tanggal produksi yang punya closing, terbaru dulu.
+         */
+        get: operations["closing_export_status_api_closing_exports_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Closing Exports
+         * @description Riwayat kiriman terbaru dulu, tanpa payload. Filter tanggal = tanggal produksi.
+         */
+        get: operations["list_closing_exports_api_closing_exports_get"];
+        put?: never;
+        /**
+         * Send Closing Export
+         * @description Kirim rekap satu outlet × tanggal produksi. Kiriman yang gagal tetap 201 dengan `status: gagal`.
+         */
+        post: operations["send_closing_export_api_closing_exports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-exports/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Closing Export
+         * @description Satu kiriman beserta payload dan response API tujuan.
+         */
+        get: operations["get_closing_export_api_closing_exports__log_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-exports/{log_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Closing Export
+         * @description Ulang kiriman yang gagal dengan payload & messageId yang sama.
+         */
+        post: operations["retry_closing_export_api_closing_exports__log_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -1311,6 +1395,190 @@ export interface components {
             products?: components["schemas"]["ClosingComparisonProduct"][];
             /** Pos Qty */
             pos_qty?: number | null;
+        };
+        /** ClosingExportDetail */
+        ClosingExportDetail: {
+            /** Id */
+            id: number;
+            /** Outlet Code */
+            outlet_code: string;
+            /**
+             * Production Date
+             * Format: date
+             */
+            production_date: string;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "mengirim" | "terkirim" | "duplikat" | "gagal";
+            /** Attempts */
+            attempts: number;
+            /** Http Status */
+            http_status?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Sent By */
+            sent_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Payload */
+            payload: Record<string, never>;
+            /** Response Body */
+            response_body?: string | null;
+        };
+        /** ClosingExportDetailResponse */
+        ClosingExportDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ClosingExportDetail"];
+        };
+        /**
+         * ClosingExportDuplicateProduct
+         * @description ProductID yang dipetakan ke lebih dari satu menu di outlet + tanggal ini.
+         */
+        ClosingExportDuplicateProduct: {
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
+            /** Menus */
+            menus: string[];
+        };
+        /** ClosingExportListResponse */
+        ClosingExportListResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingExportSummary"][];
+            pagination: components["schemas"]["PaginationMeta"];
+        };
+        /**
+         * ClosingExportStatus
+         * @description Status kirim satu outlet × tanggal produksi.
+         *
+         *     `status` dibanding kiriman terakhir yang sampai: belum_dikirim / terkirim /
+         *     perlu_kirim_ulang (rekap berubah sejak terkirim). `can_send` false kalau
+         *     diblokir atau kiriman terakhir masih `mengirim`.
+         */
+        ClosingExportStatus: {
+            /** Outlet Code */
+            outlet_code: string;
+            /**
+             * Production Date
+             * Format: date
+             */
+            production_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "belum_dikirim" | "terkirim" | "perlu_kirim_ulang";
+            /** Can Send */
+            can_send: boolean;
+            /** Item Count */
+            item_count: number;
+            /** Total Sold */
+            total_sold: number;
+            /** Menu Belum Dipetakan */
+            menu_belum_dipetakan: components["schemas"]["ClosingExportUnmappedMenu"][];
+            /** Produk Dobel */
+            produk_dobel: components["schemas"]["ClosingExportDuplicateProduct"][];
+            last_attempt?: components["schemas"]["ClosingExportSummary"] | null;
+            last_sent?: components["schemas"]["ClosingExportSummary"] | null;
+        };
+        /** ClosingExportStatusResponse */
+        ClosingExportStatusResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["ClosingExportStatus"][];
+        };
+        /** ClosingExportSummary */
+        ClosingExportSummary: {
+            /** Id */
+            id: number;
+            /** Outlet Code */
+            outlet_code: string;
+            /**
+             * Production Date
+             * Format: date
+             */
+            production_date: string;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "mengirim" | "terkirim" | "duplikat" | "gagal";
+            /** Attempts */
+            attempts: number;
+            /** Http Status */
+            http_status?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Sent By */
+            sent_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /** ClosingExportUnmappedMenu */
+        ClosingExportUnmappedMenu: {
+            /**
+             * Menu Id
+             * Format: uuid
+             */
+            menu_id: string;
+            /** Menu Code */
+            menu_code?: string | null;
+            /** Menu Name */
+            menu_name?: string | null;
         };
         /** ClosingMenuListResponse */
         ClosingMenuListResponse: {
@@ -2656,6 +2924,16 @@ export interface components {
             is_from_other_transaction: number;
             /** Items */
             items?: components["schemas"]["SalesItemSchema"][];
+        };
+        /** SendClosingExportRequest */
+        SendClosingExportRequest: {
+            /** Outlet Code */
+            outlet_code: string;
+            /**
+             * Production Date
+             * Format: date
+             */
+            production_date: string;
         };
         /**
          * SetOutletBrandRequest
@@ -4832,6 +5110,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClosingMessageDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    closing_export_status_api_closing_exports_status_get: {
+        parameters: {
+            query?: {
+                /** @description Kode outlet */
+                outlet?: string | null;
+                /** @description Tanggal produksi awal (inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal produksi akhir (inklusif) */
+                end_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingExportStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_closing_exports_api_closing_exports_get: {
+        parameters: {
+            query?: {
+                /** @description Kode outlet */
+                outlet?: string | null;
+                /** @description Tanggal produksi awal (inklusif) */
+                start_date?: string | null;
+                /** @description Tanggal produksi akhir (inklusif) */
+                end_date?: string | null;
+                status?: ("mengirim" | "terkirim" | "duplikat" | "gagal") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingExportListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_closing_export_api_closing_exports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendClosingExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingExportDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_closing_export_api_closing_exports__log_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingExportDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_closing_export_api_closing_exports__log_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingExportDetailResponse"];
                 };
             };
             /** @description Validation Error */

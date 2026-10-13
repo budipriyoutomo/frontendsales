@@ -23,6 +23,7 @@ import {
   KeadaanKosong,
 } from "@/components/dashboard/states";
 import { ClosingDetailDialog } from "@/components/closing/closing-detail-dialog";
+import { ClosingExportPanel } from "@/components/closing/closing-export-panel";
 import {
   LIMIT_LAPORAN,
   useClosingComparison,
@@ -43,11 +44,13 @@ import { Paginasi } from "@/components/layout/paginasi";
 
 const TAB_LAPORAN = "laporan";
 const TAB_PERBANDINGAN = "perbandingan";
+/** Kirim rekap ke API eksternal — admin saja (backend Fase 8). */
+const TAB_KIRIM = "kirim";
 
 /**
  * Closing report dari sistem lain (RabbitMQ) dan perbandingannya dengan
- * penjualan POS. Filter tanggal = tanggal produksi untuk perbandingan, dan
- * tanggal closing untuk daftar laporan.
+ * penjualan POS. Filter tanggal = tanggal produksi untuk perbandingan dan
+ * kirim ke API, dan tanggal closing untuk daftar laporan.
  */
 export function ClosingView({ role }: { role: Role }) {
   const router = useRouter();
@@ -58,13 +61,19 @@ export function ClosingView({ role }: { role: Role }) {
     () => bacaFilter(new URLSearchParams(searchParams.toString())),
     [searchParams],
   );
+  const bolehKirim = role === "admin";
+  const tabUrl = searchParams.get("tab");
   const tab =
-    searchParams.get("tab") === TAB_LAPORAN ? TAB_LAPORAN : TAB_PERBANDINGAN;
+    tabUrl === TAB_LAPORAN
+      ? TAB_LAPORAN
+      : tabUrl === TAB_KIRIM && bolehKirim
+        ? TAB_KIRIM
+        : TAB_PERBANDINGAN;
 
   function gantiTab(berikutnya: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (berikutnya === TAB_LAPORAN) params.set("tab", TAB_LAPORAN);
-    else params.delete("tab");
+    if (berikutnya === TAB_PERBANDINGAN) params.delete("tab");
+    else params.set("tab", berikutnya);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -81,6 +90,9 @@ export function ClosingView({ role }: { role: Role }) {
         <TabsList>
           <TabsTrigger value={TAB_PERBANDINGAN}>Perbandingan POS</TabsTrigger>
           <TabsTrigger value={TAB_LAPORAN}>Daftar laporan</TabsTrigger>
+          {bolehKirim ? (
+            <TabsTrigger value={TAB_KIRIM}>Kirim ke API</TabsTrigger>
+          ) : null}
         </TabsList>
         <TabsContent value={TAB_PERBANDINGAN} className="pt-4">
           <Perbandingan filter={filter} role={role} />
@@ -92,6 +104,11 @@ export function ClosingView({ role }: { role: Role }) {
             filter={filter}
           />
         </TabsContent>
+        {bolehKirim ? (
+          <TabsContent value={TAB_KIRIM} className="pt-4">
+            <ClosingExportPanel filter={filter} />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

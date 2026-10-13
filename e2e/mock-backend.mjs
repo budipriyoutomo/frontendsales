@@ -147,6 +147,8 @@ const state = {
       last_seen_at: "2026-09-12T15:15:00",
     },
   ],
+  /** Kiriman rekap closing ke API eksternal (backend Fase 8); API tujuan selalu 201. */
+  closingExports: [],
   /** Dinyalakan test untuk memaksa access token berikutnya ditolak (2.12). */
   paksa401Sekali: false,
 };
@@ -335,6 +337,66 @@ function perbandingan(outlet) {
   return baris;
 }
 
+/**
+ * Meniru `closing_export_service`: isi kiriman per outlet (satu tanggal
+ * closing di data tiruan), blokir menu belum dipetakan / produk dobel.
+ */
+function rekapKirim(outlet) {
+  const baris = perbandingan(outlet);
+  const items = baris.map((b) => {
+    const pos = b.pos_qty ?? 0;
+    return {
+      source: b.menu_id ? "closing" : "pos_only",
+      menuId: b.menu_id,
+      menuCode: b.menu_code,
+      menuName: b.menu_name,
+      productId: b.menu_id ? null : b.products[0].product_id,
+      productName: b.menu_id ? null : b.products[0].product_name,
+      colorplateSold: b.sold ?? 0,
+      posQty: pos,
+      totalSold: (b.sold ?? 0) + pos,
+      waste: b.waste ?? 0,
+      adjustment: b.adjustment ?? 0,
+      compensation: b.compensation ?? 0,
+    };
+  });
+  const menuBaris = baris.filter((b) => b.menu_id);
+  const perProduk = new Map();
+  for (const b of menuBaris) {
+    for (const p of b.products) {
+      perProduk.set(p.product_id, [
+        ...(perProduk.get(p.product_id) ?? []),
+        { nama: p.product_name, menu: b.menu_code },
+      ]);
+    }
+  }
+  return {
+    items,
+    hash: JSON.stringify(items),
+    menu_belum_dipetakan: menuBaris
+      .filter((b) => b.products.length === 0)
+      .map((b) => ({
+        menu_id: b.menu_id,
+        menu_code: b.menu_code,
+        menu_name: b.menu_name,
+      })),
+    produk_dobel: [...perProduk.entries()]
+      .filter(([, daftar]) => daftar.length > 1)
+      .map(([product_id, daftar]) => ({
+        product_id,
+        product_name: daftar[0].nama,
+        menus: daftar.map((d) => d.menu).sort(),
+      })),
+  };
+}
+
+/** Salinan objek tanpa kunci tertentu. */
+const tanpa = (obj, ...kunci) =>
+  Object.fromEntries(Object.entries(obj).filter(([k]) => !kunci.includes(k)));
+/** Ringkasan kiriman (tanpa payload) dan detailnya — `hash` hanya internal. */
+const ringkasKiriman = (log) => tanpa(log, "payload", "response_body", "hash");
+const detailKiriman = (log) => tanpa(log, "hash");
+
 /** Sama dengan `normalize_product_group` di backend: hanya SPASI di ujung. */
 const normalGroup = (v) =>
   String(v ?? "")
@@ -503,7 +565,8 @@ const server = createServer(async (req, res) => {
     path.startsWith("/api/product-groups") ||
     path.startsWith("/api/product-menus") ||
     path.startsWith("/api/closing-menus") ||
-    path.startsWith("/api/closing-messages");
+    path.startsWith("/api/closing-messages") ||
+    path.startsWith("/api/closing-exports");
   if (butuhAdmin && user.role !== "admin") {
     return tolak(res, 403, "Akses ditolak");
   }
@@ -1054,6 +1117,128 @@ const server = createServer(async (req, res) => {
       },
     ];
     return json(res, 200, bungkus({ ...ringkas, items, revisions }));
+  }
+
+  // ---- kirim rekap closing ke API eksternal (backend Fase 8) ----------
+  if (path === "/api/closing-exports/status" && method === "GET") {
+    const outlet = url.searchParams.get("outlet");
+    const data = Object.keys(CLOSING)
+      .filter((o) => !outlet || o === outlet)
+      .map((o) => {
+        const rekap = rekapKirim(o);
+        const riwayat = state.closingExports.filter((k) => k.outlet_code === o);
+        const terakhir = riwayat.at(-1) ?? null;
+        const sampai =
+          riwayat.findLast((k) =>
+            ["terkirim", "duplikat"].includes(k.status),
+          ) ?? null;
+        return {
+          outlet_code: o,
+          production_date: TANGGAL_CLOSING,
+          status: !sampai
+            ? "belum_dikirim"
+            : sampai.hash === rekap.hash
+              ? "terkirim"
+              : "perlu_kirim_ulang",
+          can_send:
+            rekap.menu_belum_dipetakan.length === 0 &&
+            rekap.produk_dobel.length === 0,
+          item_count: rekap.items.length,
+          total_sold: rekap.items.reduce((n, i) => n + i.totalSold, 0),
+          menu_belum_dipetakan: rekap.menu_belum_dipetakan,
+          produk_dobel: rekap.produk_dobel,
+          last_attempt: terakhir && ringkasKiriman(terakhir),
+          last_sent: sampai && ringkasKiriman(sampai),
+        };
+      });
+    return json(res, 200, bungkus(data));
+  }
+
+  if (path === "/api/closing-exports" && method === "POST") {
+    const body = await bacaBody(req);
+    const outlet = body.outlet_code;
+    if (!outlet || !body.production_date) {
+      return tolak(res, 422, [
+        { loc: ["body", "outlet_code"], msg: "Field required" },
+      ]);
+    }
+    if (!CLOSING[outlet] || body.production_date !== TANGGAL_CLOSING) {
+      return tolak(
+        res,
+        404,
+        "Tidak ada closing untuk outlet dan tanggal produksi ini.",
+      );
+    }
+    const rekap = rekapKirim(outlet);
+    if (rekap.menu_belum_dipetakan.length || rekap.produk_dobel.length) {
+      return tolak(res, 422, {
+        message:
+          "Rekap belum bisa dikirim: petakan semua menu dan pastikan satu ProductID hanya dipetakan ke satu menu.",
+        menu_belum_dipetakan: rekap.menu_belum_dipetakan,
+        produk_dobel: rekap.produk_dobel,
+      });
+    }
+    const id = state.closingExports.length + 1;
+    const sequence =
+      state.closingExports.filter((k) => k.outlet_code === outlet).length + 1;
+    const sekarang = new Date().toISOString().slice(0, 19);
+    const messageId = `6f1c2a7e-3b4d-4e8f-9a10-${String(id).padStart(12, "0")}`;
+    const log = {
+      id,
+      outlet_code: outlet,
+      production_date: TANGGAL_CLOSING,
+      sequence,
+      message_id: messageId,
+      status: "terkirim",
+      attempts: 1,
+      http_status: 201,
+      error: null,
+      item_count: rekap.items.length,
+      sent_by: user.email,
+      created_at: sekarang,
+      started_at: sekarang,
+      finished_at: sekarang,
+      hash: rekap.hash,
+      payload: {
+        messageId,
+        sentAt: `${sekarang}Z`,
+        sequence,
+        outlet: { code: outlet },
+        productionDate: TANGGAL_CLOSING,
+        items: rekap.items,
+      },
+      response_body: '{"received":true}',
+    };
+    state.closingExports.push(log);
+    return json(res, 201, bungkus(detailKiriman(log)));
+  }
+
+  if (path === "/api/closing-exports" && method === "GET") {
+    const outlet = url.searchParams.get("outlet");
+    const data = state.closingExports
+      .filter((k) => !outlet || k.outlet_code === outlet)
+      .toReversed()
+      .map(ringkasKiriman);
+    return json(res, 200, {
+      ...bungkus(data),
+      pagination: { limit: 50, offset: 0, total: data.length, has_more: false },
+    });
+  }
+
+  const kiriman = /^\/api\/closing-exports\/(\d+)(\/retry)?$/.exec(path);
+  if (kiriman) {
+    const log = state.closingExports.find((k) => k.id === Number(kiriman[1]));
+    if (!log) return tolak(res, 404, "Kiriman tidak ditemukan");
+    if (!kiriman[2] && method === "GET") {
+      return json(res, 200, bungkus(detailKiriman(log)));
+    }
+    if (kiriman[2] && method === "POST") {
+      return tolak(
+        res,
+        409,
+        "Tidak bisa diulang: kiriman ini sudah sampai di API tujuan.",
+      );
+    }
   }
 
   if (path === "/api/closing-messages" && method === "GET") {

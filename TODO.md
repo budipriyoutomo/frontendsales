@@ -615,10 +615,43 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       termasuk produk bukan Colorplate — tampil "Tidak ada di Colorplate"
       dengan group POS dan tanda "Belum dipetakan ke menu" (konsolidasi). Tipe
       digenerate ulang; unit 315, a11y, dan E2E lulus.
-- [ ] **11.9 Test flaky lama** — `alur-utama.spec.ts` › "401 di tengah sesi…"
+- [x] **11.9 Test flaky lama** (diperbaiki 2026-10-13: tunggu URL, lalu cari
+      `getByRole("cell", { name: "OUTLET_001" })`; 10/10 ulang lulus) — `alur-utama.spec.ts` › "401 di tengah sesi…"
       sesekali gagal karena `getByText("OUTLET_001")` juga menangkap span
       pengukur recharts (`#recharts_measurement_span`). 3× ulang lulus semua;
       bukan dari Fase 11. Perbaikannya: persempit locator ke tabel/kartu.
+
+---
+
+## Fase 12 — Kirim rekap closing ke API eksternal
+
+Pasangan backend sync-api TODO Fase 8 (kontrak: sync-api
+`docs/usulan-kontrak-kirim-closing.md`). Dikerjakan 2026-10-13 dengan TDD.
+Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
+
+- [x] **12.1 Tipe** — `src/types/api.ts` digenerate ulang dari OpenAPI backend
+      (hanya penambahan skema `ClosingExport*`); alias di `domain.ts`.
+- [x] **12.2 Tab _Kirim ke API_ di `/closing`** (admin saja; `?tab=kirim`,
+      non-admin dikembalikan ke Perbandingan) — `ClosingExportPanel`:
+      tabel status per outlet × tanggal produksi (item, Total Sold, status
+      Belum dikirim / Terkirim / Perlu kirim ulang, kiriman terakhir + error),
+      alasan blokir (menu belum dipetakan, ProductID dipetakan ke >1 menu) +
+      tautan _Petakan menu_, tombol **Kirim** (mati kalau diblokir/sedang
+      mengirim) lewat dialog konfirmasi, tombol **Ulangi** untuk kiriman
+      terakhir yang gagal. Hasil diumumkan lewat toast — 201 dengan
+      `status: gagal` tampil sebagai error; 422 menampilkan `detail.message`.
+- [x] **12.3 Riwayat kiriman** — tabel berpaginasi + `ClosingExportDetailDialog`
+      (status, messageId, HTTP, percobaan, error, response API tujuan, payload + Salin, Ulangi).
+- [x] **12.4 Test** — `closing-export-panel.test.tsx` (10), tambahan di
+      `closing-view.test.tsx` (4) dan `a11y.test.tsx` (1). Unit 369 lulus.
+- [x] **12.5 E2E** — `e2e/closing.spec.ts`: kirim OUTLET_001 → status
+      Terkirim → payload di riwayat; tab tidak ada untuk manager.
+      `mock-backend.mjs` punya `/api/closing-exports*` (API tujuan tiruan
+      selalu 201). E2E 41/41 lulus.
+- [x] **12.6 Kiriman macet** (backend 8.10) — tipe digenerate ulang
+      (`started_at`); waktu kiriman yang masih berjalan memakai `started_at`.
+      Tombol Ulangi untuk `mengirim` yang belum macet dijawab 409 "masih sedang
+      berjalan" oleh backend dan tampil sebagai toast.
 
 ---
 

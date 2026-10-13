@@ -116,9 +116,12 @@ test.describe("Sesi (8.1)", () => {
     await page.getByRole("link", { name: "Status Sync" }).click();
 
     // Proxy BFF me-refresh lalu mengulang request — halaman tetap terisi
-    // dan user tidak pernah melihat /login.
-    await expect(page.getByText("OUTLET_001")).toBeVisible();
+    // dan user tidak pernah melihat /login. Dicari sebagai sel tabel: span
+    // pengukur recharts dari dashboard juga memuat teks "OUTLET_001" (11.9).
     await expect(page).toHaveURL(/\/status-sync/);
+    await expect(
+      page.getByRole("cell", { name: "OUTLET_001", exact: true }),
+    ).toBeVisible();
   });
 });
 

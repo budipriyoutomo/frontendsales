@@ -1,5 +1,10 @@
 import { Badge } from "@/components/ui/badge";
-import { STATUS_PESAN, type StatusPesan } from "@/lib/closing";
+import {
+  STATUS_KIRIM,
+  STATUS_LOG_KIRIM,
+  STATUS_PESAN,
+  type StatusPesan,
+} from "@/lib/closing";
 import { cn } from "@/lib/utils";
 
 const KELAS_NADA = {
@@ -9,15 +14,44 @@ const KELAS_NADA = {
   netral: "",
 } as const;
 
-/** Badge status log pesan RabbitMQ (diterima, duplikat, ditolak, ...). */
-export function StatusPesanBadge({ status }: { status: string }) {
-  if (!(status in STATUS_PESAN)) {
+type Nada = keyof typeof KELAS_NADA;
+
+function BadgeStatus({
+  status,
+  daftar,
+}: {
+  status: string;
+  daftar: Record<string, { label: string; nada: Nada }>;
+}) {
+  if (!(status in daftar)) {
     return <Badge variant="outline">{status}</Badge>;
   }
-  const { label, nada } = STATUS_PESAN[status as StatusPesan];
+  const { label, nada } = daftar[status];
   return (
     <Badge variant="secondary" className={cn(KELAS_NADA[nada])}>
       {label}
     </Badge>
   );
+}
+
+/** Badge status log pesan RabbitMQ (diterima, duplikat, ditolak, ...). */
+export function StatusPesanBadge({ status }: { status: string }) {
+  return (
+    <BadgeStatus
+      status={status}
+      daftar={
+        STATUS_PESAN as Record<StatusPesan, { label: string; nada: Nada }>
+      }
+    />
+  );
+}
+
+/** Badge status kirim per outlet × tanggal (belum dikirim / terkirim / perlu kirim ulang). */
+export function StatusKirimBadge({ status }: { status: string }) {
+  return <BadgeStatus status={status} daftar={STATUS_KIRIM} />;
+}
+
+/** Badge status satu kiriman ke API eksternal (mengirim / terkirim / gagal ...). */
+export function StatusLogKirimBadge({ status }: { status: string }) {
+  return <BadgeStatus status={status} daftar={STATUS_LOG_KIRIM} />;
 }
