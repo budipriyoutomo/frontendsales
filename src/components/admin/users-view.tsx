@@ -64,7 +64,7 @@ export function UsersView({ sayaId }: { sayaId: number }) {
 
   const daftar = useQuery({
     queryKey: ["users"],
-    queryFn: () => api.request<UserAdmin[]>("/api/users"),
+    queryFn: ({ signal }) => api.request<UserAdmin[]>("/api/users", { signal }),
   });
 
   const semua = daftar.data ?? [];

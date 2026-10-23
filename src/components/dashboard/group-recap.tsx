@@ -42,7 +42,7 @@ export function GroupRecap({
   terpilih: readonly string[];
   onTerpilihChange: (groups: string[]) => void;
 }) {
-  const daftar = useSalesProductGroups(filter.outlet);
+  const daftar = useSalesProductGroups(filter.outlet, filter);
   const rekap = useSalesByGroup(filter, terpilih);
 
   // Group dari URL yang tidak ada di data outlet ini tetap ditampilkan,

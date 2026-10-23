@@ -86,12 +86,14 @@ export function ProductMenusView() {
 
   const daftar = useQuery({
     queryKey: ["product-menus"],
-    queryFn: () => api.request<ProductMenuMapping[]>("/api/product-menus"),
+    queryFn: ({ signal }) =>
+      api.request<ProductMenuMapping[]>("/api/product-menus", { signal }),
   });
   // Cache yang sama dengan ProductGroupsView — tidak menambah request.
   const groupTerdaftar = useQuery({
     queryKey: ["product-groups"],
-    queryFn: () => api.request<ProductGroupMapping[]>("/api/product-groups"),
+    queryFn: ({ signal }) =>
+      api.request<ProductGroupMapping[]>("/api/product-groups", { signal }),
   });
   const diData = useSalesProductGroups();
   const outlets = useOutlets(true);
@@ -105,8 +107,9 @@ export function ProductMenusView() {
       groupDipilih ?? "",
       cariTerkirim,
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.request<ProductMenuCandidate[]>("/api/product-menus/candidates", {
+        signal,
         query: {
           outlet: outletDipilih,
           product_group: groupDipilih,

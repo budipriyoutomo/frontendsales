@@ -78,6 +78,7 @@ async function handle(
       method: request.method,
       body: body === "" ? null : body,
       session: await readSession(),
+      signal: request.signal,
     },
     request.headers,
   );
@@ -88,6 +89,28 @@ async function handle(
       { detail: "Sesi berakhir. Silakan masuk lagi." },
       { status: 401 },
     );
+  }
+
+  if (hasil.kind === "timeout") {
+    return NextResponse.json(
+      {
+        detail:
+          "Server terlalu lama merespons. Persempit rentang tanggal atau filter, lalu coba lagi.",
+      },
+      { status: 504 },
+    );
+  }
+
+  if (hasil.kind === "unreachable") {
+    return NextResponse.json(
+      { detail: "Server tidak dapat dihubungi. Coba lagi beberapa saat." },
+      { status: 502 },
+    );
+  }
+
+  if (hasil.kind === "aborted") {
+    // Browser sudah pergi; isi response ini tidak akan dibaca siapa pun.
+    return new NextResponse(null, { status: 499 });
   }
 
   if (hasil.refreshedAccessToken) {

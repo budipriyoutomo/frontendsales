@@ -47,6 +47,28 @@ function tanggalSah(nilai: string | null): string | null {
   return cocok ? nilai : null;
 }
 
+/**
+ * Sama dengan `REPORT_MAX_RANGE_DAYS` di backend: rentang lebih panjang
+ * ditolak 422, karena query-nya memindai sebagian besar data penjualan.
+ */
+export const MAKS_HARI_RENTANG = 366;
+
+const MS_SEHARI = 24 * 60 * 60 * 1000;
+
+/** Selisih hari kalender `end_date - start_date`. */
+export function panjangRentangHari(
+  rentang: Pick<Filter, "start_date" | "end_date">,
+): number {
+  // Dihitung di UTC: tanggal lokal bisa melompat sejam saat pergantian DST.
+  const keUtc = (nilai: string) => {
+    const [tahun, bulan, hari] = nilai.split("-").map(Number);
+    return Date.UTC(tahun, bulan - 1, hari);
+  };
+  return Math.round(
+    (keUtc(rentang.end_date) - keUtc(rentang.start_date)) / MS_SEHARI,
+  );
+}
+
 export function rentangDefault(hariIni: Date = new Date()): {
   start_date: string;
   end_date: string;

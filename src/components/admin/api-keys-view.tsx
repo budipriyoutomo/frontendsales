@@ -49,7 +49,7 @@ export function ApiKeysView() {
 
   const daftar = useQuery({
     queryKey: ["api-keys"],
-    queryFn: () => api.request<ApiKey[]>("/api/api-keys"),
+    queryFn: ({ signal }) => api.request<ApiKey[]>("/api/api-keys", { signal }),
   });
 
   const segarkan = () => qc.invalidateQueries({ queryKey: ["api-keys"] });

@@ -187,6 +187,7 @@ const PESAN_STATUS: Record<number, string> = {
   500: "Terjadi kesalahan di server.",
   502: "Server tidak dapat dihubungi.",
   503: "Layanan sedang tidak tersedia.",
+  504: "Server terlalu lama merespons. Persempit rentang tanggal, lalu coba lagi.",
 };
 
 function messageFromDetail(detail: unknown, status: number): string {

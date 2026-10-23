@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api/browser";
 import type { StatusPesan } from "@/lib/closing";
 import type { Filter } from "@/lib/filter";
@@ -39,9 +44,10 @@ function queryFilter(filter: Filter) {
 export function useClosingComparison(filter: Filter, includeDeleted: boolean) {
   return useQuery({
     queryKey: ["closing-comparison", queryFilter(filter), includeDeleted],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.request<ClosingComparisonRow[]>("/api/closing-reports/comparison", {
+        signal,
         query: {
           ...queryFilter(filter),
           include_deleted: includeDeleted || undefined,
@@ -53,9 +59,10 @@ export function useClosingComparison(filter: Filter, includeDeleted: boolean) {
 export function useClosingReports(filter: Filter, offset: number) {
   return useQuery({
     queryKey: ["closing-reports", queryFilter(filter), offset],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.requestWithMeta<ClosingReportSummary[]>("/api/closing-reports", {
+        signal,
         query: { ...queryFilter(filter), limit: LIMIT_LAPORAN, offset },
       }),
   });
@@ -65,9 +72,10 @@ export function useClosingReport(closingReportId: string | null) {
   return useQuery({
     queryKey: ["closing-report", closingReportId],
     enabled: closingReportId !== null,
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.request<ClosingReportDetail>(
         `/api/closing-reports/${closingReportId}`,
+        { signal },
       ),
   });
 }
@@ -77,9 +85,10 @@ export type StatusMenu = "all" | "mapped" | "unmapped";
 export function useClosingMenus(status: StatusMenu, q: string) {
   return useQuery({
     queryKey: ["closing-menus", status, q],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.request<ClosingMenu[]>("/api/closing-menus", {
+        signal,
         query: { status, q: q || undefined },
       }),
   });
@@ -95,11 +104,12 @@ export type FilterPesan = {
 export function useClosingMessages(filter: FilterPesan, offset: number) {
   return useQuery({
     queryKey: ["closing-messages", filter, offset],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: async () => {
+    placeholderData: keepPreviousData,
+    queryFn: async ({ signal }) => {
       const hasil = await api.requestWithMeta<ClosingMessageSummary[]>(
         "/api/closing-messages",
         {
+          signal,
           query: {
             status: filter.status,
             q: filter.q || undefined,
@@ -122,8 +132,10 @@ export function useClosingMessage(id: number | null) {
   return useQuery({
     queryKey: ["closing-message", id],
     enabled: id !== null,
-    queryFn: () =>
-      api.request<ClosingMessageDetail>(`/api/closing-messages/${id}`),
+    queryFn: ({ signal }) =>
+      api.request<ClosingMessageDetail>(`/api/closing-messages/${id}`, {
+        signal,
+      }),
   });
 }
 
@@ -134,9 +146,10 @@ export function useClosingMessage(id: number | null) {
 export function useClosingExportStatus(filter: Filter) {
   return useQuery({
     queryKey: ["closing-export-status", queryFilter(filter)],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.request<ClosingExportStatus[]>("/api/closing-exports/status", {
+        signal,
         query: queryFilter(filter),
       }),
   });
@@ -145,9 +158,10 @@ export function useClosingExportStatus(filter: Filter) {
 export function useClosingExports(filter: Filter, offset: number) {
   return useQuery({
     queryKey: ["closing-exports", queryFilter(filter), offset],
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.requestWithMeta<ClosingExportSummary[]>("/api/closing-exports", {
+        signal,
         query: { ...queryFilter(filter), limit: LIMIT_LAPORAN, offset },
       }),
   });
@@ -157,8 +171,10 @@ export function useClosingExport(id: number | null) {
   return useQuery({
     queryKey: ["closing-export", id],
     enabled: id !== null,
-    queryFn: () =>
-      api.request<ClosingExportDetail>(`/api/closing-exports/${id}`),
+    queryFn: ({ signal }) =>
+      api.request<ClosingExportDetail>(`/api/closing-exports/${id}`, {
+        signal,
+      }),
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/browser";
 import { filterKeQuery, type Filter } from "@/lib/filter";
 import type { Pagination, Sale, SaleDetail } from "@/types/domain";
@@ -18,9 +18,10 @@ export function useSalesList(
     queryKey: ["sales", filterKeQuery(filter), offset, limit],
     // Halaman lama ditahan saat pindah halaman supaya tabel tidak berkedip
     // kosong lalu terisi lagi.
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.requestWithMeta<Sale[]>("/api/sales", {
+        signal,
         query: {
           ...filterKeQuery(filter),
           limit: Math.min(limit, LIMIT_MAKS),
@@ -34,7 +35,8 @@ export function useSaleDetail(transactionId: number | null) {
   return useQuery({
     queryKey: ["sale", transactionId],
     enabled: transactionId !== null,
-    queryFn: () => api.request<SaleDetail>(`/api/sales/${transactionId}`),
+    queryFn: ({ signal }) =>
+      api.request<SaleDetail>(`/api/sales/${transactionId}`, { signal }),
   });
 }
 

@@ -18,6 +18,8 @@ export type ForwardInput = {
   /** Body mentah; harus string/null supaya bisa dikirim ulang saat retry. */
   body: string | null;
   session: Session | null;
+  /** Sinyal batal dari browser — request ke backend ikut dihentikan. */
+  signal?: AbortSignal;
 };
 
 export type ForwardResult =
@@ -28,7 +30,43 @@ export type ForwardResult =
        *  menuliskannya kembali ke cookie. */
       refreshedAccessToken?: string;
     }
-  | { kind: "session-expired" };
+  | { kind: "session-expired" }
+  /** Backend tidak menjawab dalam batas waktu (`BACKEND_TIMEOUT_MS`). */
+  | { kind: "timeout" }
+  /** Backend tidak bisa dihubungi sama sekali. */
+  | { kind: "unreachable" }
+  /** Browser membatalkan request (pindah halaman, ganti filter). */
+  | { kind: "aborted" };
+
+/**
+ * Sedikit di atas `statement_timeout` backend (30 detik), supaya pesan 503
+ * dari backend yang lebih jelas sempat sampai lebih dulu.
+ */
+const TIMEOUT_DEFAULT_MS = 35_000;
+/** Export CSV memang menarik seluruh hasil filter — beri waktu lebih. */
+const TIMEOUT_EXPORT_DEFAULT_MS = 120_000;
+const PATH_EXPORT = new Set(["/api/sales/export"]);
+
+function angkaEnv(nama: string, cadangan: number): number {
+  const nilai = Number(process.env[nama]);
+  return Number.isFinite(nilai) && nilai > 0 ? nilai : cadangan;
+}
+
+function batasWaktuMs(path: string): number {
+  return PATH_EXPORT.has(path)
+    ? angkaEnv("BACKEND_EXPORT_TIMEOUT_MS", TIMEOUT_EXPORT_DEFAULT_MS)
+    : angkaEnv("BACKEND_TIMEOUT_MS", TIMEOUT_DEFAULT_MS);
+}
+
+/** Dilempar `callBackend`; diterjemahkan jadi `ForwardResult` di satu tempat. */
+class GagalMenghubungi extends Error {
+  constructor(
+    readonly kind: "timeout" | "unreachable" | "aborted",
+    options?: ErrorOptions,
+  ) {
+    super(kind, options);
+  }
+}
 
 export function getApiBaseUrl(): string {
   const base = process.env.API_BASE_URL;
@@ -70,27 +108,48 @@ async function callBackend(
   extraHeaders?: Headers,
 ): Promise<Response> {
   const url = `${getApiBaseUrl()}${input.path}${input.search}`;
+  const batas = AbortSignal.timeout(batasWaktuMs(input.path));
+  const signal = input.signal ? AbortSignal.any([batas, input.signal]) : batas;
 
-  return fetch(url, {
-    method: input.method,
-    headers: backendHeaders(accessToken, extraHeaders),
-    body: input.body ?? undefined,
-    // Lapisan proxy tidak boleh menyimpan cache; kesegaran ditentukan
-    // TanStack Query di sisi klien.
-    cache: "no-store",
-  });
+  try {
+    return await fetch(url, {
+      method: input.method,
+      headers: backendHeaders(accessToken, extraHeaders),
+      body: input.body ?? undefined,
+      // Lapisan proxy tidak boleh menyimpan cache; kesegaran ditentukan
+      // TanStack Query di sisi klien.
+      cache: "no-store",
+      signal,
+    });
+  } catch (cause) {
+    if (input.signal?.aborted) throw new GagalMenghubungi("aborted");
+    if (batas.aborted) throw new GagalMenghubungi("timeout");
+    throw new GagalMenghubungi("unreachable", { cause });
+  }
 }
 
 /** Menukar refresh token dengan access token baru. `null` kalau ditolak. */
 async function tukarRefreshToken(refreshToken: string): Promise<string | null> {
   if (!refreshToken) return null;
 
-  const response = await fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-    cache: "no-store",
-  });
+  const batas = AbortSignal.timeout(
+    angkaEnv("BACKEND_TIMEOUT_MS", TIMEOUT_DEFAULT_MS),
+  );
+  let response: Response;
+  try {
+    response = await fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store",
+      signal: batas,
+    });
+  } catch (cause) {
+    // Backend bermasalah bukan berarti sesi habis — jangan hapus cookie.
+    throw new GagalMenghubungi(batas.aborted ? "timeout" : "unreachable", {
+      cause,
+    });
+  }
 
   if (!response.ok) return null;
 
@@ -108,6 +167,18 @@ async function buangBody(response: Response): Promise<void> {
 }
 
 export async function forwardToBackend(
+  input: ForwardInput,
+  extraHeaders?: Headers,
+): Promise<ForwardResult> {
+  try {
+    return await teruskan(input, extraHeaders);
+  } catch (err) {
+    if (err instanceof GagalMenghubungi) return { kind: err.kind };
+    throw err;
+  }
+}
+
+async function teruskan(
   input: ForwardInput,
   extraHeaders?: Headers,
 ): Promise<ForwardResult> {

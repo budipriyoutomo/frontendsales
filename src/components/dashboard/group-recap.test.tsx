@@ -41,6 +41,17 @@ describe("GroupRecap — pilihan group (10.9)", () => {
     expect(new URL(urlGroup).searchParams.get("outlet")).toBe("OUT1");
   });
 
+  it("daftar group dibatasi rentang tanggal filter — tanpa itu seluruh data dipindai", async () => {
+    renderWithQuery(
+      <GroupRecap filter={FILTER} terpilih={[]} onTerpilihChange={vi.fn()} />,
+    );
+
+    await screen.findByRole("group", { name: /pilih group/i });
+    const params = new URL(urlGroup).searchParams;
+    expect(params.get("start_date")).toBe("2026-09-01");
+    expect(params.get("end_date")).toBe("2026-09-12");
+  });
+
   it("belum ada group terpilih → ajakan memilih, tanpa request rekap", async () => {
     let rekapDiminta = 0;
     server.use(

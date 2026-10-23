@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,16 +85,17 @@ export function ProductImportDialog({
   const brands = useQuery({
     queryKey: ["brands"],
     enabled: open,
-    queryFn: () => api.request<Brand[]>("/api/brands"),
+    queryFn: ({ signal }) => api.request<Brand[]>("/api/brands", { signal }),
   });
 
   const filterBrand = brand === SEMUA_BRAND ? undefined : brand;
   const kandidat = useQuery({
     queryKey: ["product-import-candidates", filterBrand, cariTerkirim],
     enabled: open,
-    placeholderData: (sebelumnya) => sebelumnya,
-    queryFn: () =>
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
       api.request<ImportCandidate[]>("/api/products/import-candidates", {
+        signal,
         query: { brand_id: filterBrand, q: cariTerkirim || undefined },
       }),
   });

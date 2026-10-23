@@ -169,7 +169,8 @@ export function ProductsView() {
 
   const products = useQuery({
     queryKey: ["products"],
-    queryFn: () => api.request<Product[]>("/api/products"),
+    queryFn: ({ signal }) =>
+      api.request<Product[]>("/api/products", { signal }),
   });
 
   const semua = products.data ?? [];
@@ -355,7 +356,7 @@ function ProductFormDialog({
   const brands = useQuery({
     queryKey: ["brands"],
     enabled: sasaran !== null,
-    queryFn: () => api.request<Brand[]>("/api/brands"),
+    queryFn: ({ signal }) => api.request<Brand[]>("/api/brands", { signal }),
   });
 
   const simpan = useMutation({

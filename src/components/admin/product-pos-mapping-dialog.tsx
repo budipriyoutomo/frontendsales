@@ -55,7 +55,8 @@ export function ProductPosMappingDialog({
   const products = useQuery({
     queryKey: ["products"],
     enabled: terbuka,
-    queryFn: () => api.request<Product[]>("/api/products"),
+    queryFn: ({ signal }) =>
+      api.request<Product[]>("/api/products", { signal }),
   });
   const produk = products.data?.find((p) => p.id === productId) ?? null;
 
@@ -74,8 +75,9 @@ export function ProductPosMappingDialog({
   const kandidat = useQuery({
     queryKey: ["product-pos-candidates", filterOutlet, cariTerkirim],
     enabled: terbuka && cariTerkirim !== "",
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.request<PosCandidate[]>("/api/products/pos-candidates", {
+        signal,
         query: { q: cariTerkirim, outlet: filterOutlet },
       }),
   });

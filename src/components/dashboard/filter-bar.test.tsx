@@ -290,3 +290,21 @@ describe("FilterBar — tanpaBrand (halaman closing)", () => {
     expect(screen.getByRole("option", { name: "OUT3" })).toBeVisible();
   });
 });
+
+describe("FilterBar — batas rentang", () => {
+  it("rentang lebih dari setahun → peringatan, laporan tidak akan dimuat", async () => {
+    searchParams = new URLSearchParams(
+      "start_date=2024-01-01&end_date=2026-03-31",
+    );
+
+    renderWithQuery(<FilterBar role="admin" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/366 hari/);
+  });
+
+  it("rentang wajar → tanpa peringatan", () => {
+    renderWithQuery(<FilterBar role="admin" />);
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});

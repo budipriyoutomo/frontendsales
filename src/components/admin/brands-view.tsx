@@ -80,11 +80,12 @@ export function BrandsView() {
 
   const brands = useQuery({
     queryKey: ["brands"],
-    queryFn: () => api.request<Brand[]>("/api/brands"),
+    queryFn: ({ signal }) => api.request<Brand[]>("/api/brands", { signal }),
   });
   const outlets = useQuery({
     queryKey: ["brand-outlets"],
-    queryFn: () => api.request<OutletBrand[]>("/api/brands/outlets"),
+    queryFn: ({ signal }) =>
+      api.request<OutletBrand[]>("/api/brands/outlets", { signal }),
   });
 
   const segarkan = () =>

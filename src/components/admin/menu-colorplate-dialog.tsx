@@ -57,7 +57,8 @@ export function MenuColorplateDialog({
 
   const warna = useQuery({
     queryKey: ["product-menu-platecolors"],
-    queryFn: () => api.request<string[]>("/api/product-menus/platecolors"),
+    queryFn: ({ signal }) =>
+      api.request<string[]>("/api/product-menus/platecolors", { signal }),
     enabled: menu !== null,
   });
 

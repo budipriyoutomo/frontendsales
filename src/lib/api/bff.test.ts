@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test/msw/server";
 import { forwardToBackend } from "@/lib/api/bff";
@@ -227,5 +227,73 @@ describe("forwardToBackend — refresh gagal (2.13)", () => {
     const hasil = await forward({ session: null });
 
     expect(hasil.kind).toBe("session-expired");
+  });
+});
+
+describe("forwardToBackend — backend lambat atau mati", () => {
+  it("berhenti menunggu setelah batas waktu dan melaporkan timeout", async () => {
+    process.env.BACKEND_TIMEOUT_MS = "50";
+    server.use(
+      http.get(`${BACKEND}/api/sales/summary`, async () => {
+        await delay(500);
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+    );
+
+    try {
+      const hasil = await forward();
+
+      expect(hasil.kind).toBe("timeout");
+    } finally {
+      delete process.env.BACKEND_TIMEOUT_MS;
+    }
+  });
+
+  it("export CSV mendapat batas waktu lebih panjang", async () => {
+    process.env.BACKEND_TIMEOUT_MS = "50";
+    process.env.BACKEND_EXPORT_TIMEOUT_MS = "2000";
+    server.use(
+      http.get(`${BACKEND}/api/sales/export`, async () => {
+        await delay(150);
+        return HttpResponse.text("a,b\n1,2");
+      }),
+    );
+
+    try {
+      const hasil = await forward({ path: "/api/sales/export" });
+
+      expect(hasil.kind).toBe("ok");
+    } finally {
+      delete process.env.BACKEND_TIMEOUT_MS;
+      delete process.env.BACKEND_EXPORT_TIMEOUT_MS;
+    }
+  });
+
+  it("melaporkan backend tidak terjangkau, bukan melempar error", async () => {
+    server.use(
+      http.get(`${BACKEND}/api/sales/summary`, () => HttpResponse.error()),
+    );
+
+    const hasil = await forward();
+
+    expect(hasil.kind).toBe("unreachable");
+  });
+
+  it("membatalkan request ke backend saat browser membatalkan", async () => {
+    let selesai = false;
+    server.use(
+      http.get(`${BACKEND}/api/sales/summary`, async () => {
+        await delay(500);
+        selesai = true;
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+    );
+
+    const pengendali = new AbortController();
+    const janji = forward({ signal: pengendali.signal });
+    pengendali.abort();
+
+    expect((await janji).kind).toBe("aborted");
+    expect(selesai).toBe(false);
   });
 });

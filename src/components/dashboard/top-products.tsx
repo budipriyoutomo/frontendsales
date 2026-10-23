@@ -55,7 +55,7 @@ export function TopProducts({
   onGroupChange: (group: string | undefined) => void;
 }) {
   const query = useTopProducts(filter, 10, group);
-  const daftar = useSalesProductGroups(filter.outlet);
+  const daftar = useSalesProductGroups(filter.outlet, filter);
 
   const pilihan = [...(daftar.data ?? [])];
   if (group && !pilihan.includes(group)) pilihan.push(group);

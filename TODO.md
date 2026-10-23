@@ -653,6 +653,21 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       Tombol Ulangi untuk `mengirim` yang belum macet dijawab 409 "masih sedang
       berjalan" oleh backend dan tampil sebagai toast.
 
+## Fase 13 — Performa & error saat data besar (2026-10-23)
+
+Pasangan backend Fase 9.
+
+- [x] **13.1** BFF memberi batas waktu ke FastAPI (`BACKEND_TIMEOUT_MS`, default
+      35 detik; export `BACKEND_EXPORT_TIMEOUT_MS` 120 detik). Hasilnya 504 JSON,
+      backend mati → 502 JSON, browser batal → request ke backend ikut berhenti.
+- [x] **13.2** Semua `queryFn` meneruskan `signal` TanStack — ganti filter
+      membatalkan request lama. `placeholderData` memakai `keepPreviousData`.
+- [x] **13.3** Dropdown group dashboard mengirim rentang tanggal filter.
+- [x] **13.4** 503/504 tidak diulang otomatis (`src/lib/api/retry.ts`).
+- [x] **13.5** Peringatan di filter kalau rentang > 366 hari (`MAKS_HARI_RENTANG`).
+- [ ] **13.6** `npm run gen:api` ulang setelah backend jalan (param baru di
+      `/api/sales/product-groups`).
+
 ---
 
 ## Lampiran — Kontrak API terverifikasi

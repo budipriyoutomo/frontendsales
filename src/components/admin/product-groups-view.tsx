@@ -54,7 +54,8 @@ export function ProductGroupsView() {
 
   const daftar = useQuery({
     queryKey: ["product-groups"],
-    queryFn: () => api.request<ProductGroupMapping[]>("/api/product-groups"),
+    queryFn: ({ signal }) =>
+      api.request<ProductGroupMapping[]>("/api/product-groups", { signal }),
   });
   const diData = useSalesProductGroups();
 

@@ -13,7 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBrands, useOutlets } from "@/hooks/use-sales";
-import { bacaFilter, filterKeSearchParams, rentangDefault } from "@/lib/filter";
+import {
+  bacaFilter,
+  filterKeSearchParams,
+  MAKS_HARI_RENTANG,
+  panjangRentangHari,
+  rentangDefault,
+} from "@/lib/filter";
 import type { Filter } from "@/lib/filter";
 import { bolehLihatPemilihOutlet } from "@/lib/auth/access";
 import type { Role } from "@/lib/auth/current-user";
@@ -104,103 +110,117 @@ export function FilterBar({
     });
   }
 
+  const terlaluPanjang = panjangRentangHari(filter) > MAKS_HARI_RENTANG;
+
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="start_date">Dari tanggal</Label>
-        <Input
-          id="start_date"
-          type="date"
-          className="w-40"
-          value={filter.start_date}
-          max={filter.end_date}
-          onChange={(e) => terapkan({ ...filter, start_date: e.target.value })}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="end_date">Sampai tanggal</Label>
-        <Input
-          id="end_date"
-          type="date"
-          className="w-40"
-          value={filter.end_date}
-          min={filter.start_date}
-          onChange={(e) => terapkan({ ...filter, end_date: e.target.value })}
-        />
-      </div>
-
-      {tampilkanOutlet &&
-      !tanpaBrand &&
-      (brands.data?.length || filter.brand) ? (
-        // Disembunyikan sampai ada brand terdaftar — pemilih tanpa pilihan
-        // hanya memakan tempat. Tetap tampil kalau URL sudah membawa brand,
-        // supaya filter yang sedang berlaku selalu terlihat.
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="brand">Brand</Label>
-          <Select
-            value={filter.brand ?? SEMUA_BRAND}
-            onValueChange={(v) => gantiBrand(v === SEMUA_BRAND ? undefined : v)}
-          >
-            <SelectTrigger id="brand" className="w-48">
-              <SelectValue placeholder="Semua brand" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SEMUA_BRAND}>Semua brand</SelectItem>
-              {(brands.data ?? []).map((b) => (
-                <SelectItem key={b.code} value={b.code}>
-                  {b.name} ({b.code}){b.is_active ? "" : " — nonaktif"}
-                </SelectItem>
-              ))}
-              {filter.brand &&
-              !(brands.data ?? []).some((b) => b.code === filter.brand) ? (
-                <SelectItem value={filter.brand}>{filter.brand}</SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
-      {tampilkanOutlet ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="outlet">Outlet</Label>
-          <Select
-            value={filter.outlet ?? SEMUA_OUTLET}
-            onValueChange={(v) =>
-              terapkan({
-                ...filter,
-                outlet: v === SEMUA_OUTLET ? undefined : v,
-              })
+          <Label htmlFor="start_date">Dari tanggal</Label>
+          <Input
+            id="start_date"
+            type="date"
+            className="w-40"
+            value={filter.start_date}
+            max={filter.end_date}
+            onChange={(e) =>
+              terapkan({ ...filter, start_date: e.target.value })
             }
-          >
-            <SelectTrigger id="outlet" className="w-48">
-              <SelectValue placeholder="Semua outlet" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SEMUA_OUTLET}>Semua outlet</SelectItem>
-              {pilihanOutlet.map((o) => (
-                <SelectItem key={o.outlet_code} value={o.outlet_code}>
-                  {o.outlet_code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
-      ) : null}
 
-      <div className="flex gap-1.5">
-        {PRESET.map((p) => (
-          <Button
-            key={p.hari}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => pakaiPreset(p.hari)}
-          >
-            {p.label}
-          </Button>
-        ))}
+        <div className="space-y-1.5">
+          <Label htmlFor="end_date">Sampai tanggal</Label>
+          <Input
+            id="end_date"
+            type="date"
+            className="w-40"
+            value={filter.end_date}
+            min={filter.start_date}
+            onChange={(e) => terapkan({ ...filter, end_date: e.target.value })}
+          />
+        </div>
+
+        {tampilkanOutlet &&
+        !tanpaBrand &&
+        (brands.data?.length || filter.brand) ? (
+          // Disembunyikan sampai ada brand terdaftar — pemilih tanpa pilihan
+          // hanya memakan tempat. Tetap tampil kalau URL sudah membawa brand,
+          // supaya filter yang sedang berlaku selalu terlihat.
+          <div className="space-y-1.5">
+            <Label htmlFor="brand">Brand</Label>
+            <Select
+              value={filter.brand ?? SEMUA_BRAND}
+              onValueChange={(v) =>
+                gantiBrand(v === SEMUA_BRAND ? undefined : v)
+              }
+            >
+              <SelectTrigger id="brand" className="w-48">
+                <SelectValue placeholder="Semua brand" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEMUA_BRAND}>Semua brand</SelectItem>
+                {(brands.data ?? []).map((b) => (
+                  <SelectItem key={b.code} value={b.code}>
+                    {b.name} ({b.code}){b.is_active ? "" : " — nonaktif"}
+                  </SelectItem>
+                ))}
+                {filter.brand &&
+                !(brands.data ?? []).some((b) => b.code === filter.brand) ? (
+                  <SelectItem value={filter.brand}>{filter.brand}</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        {tampilkanOutlet ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="outlet">Outlet</Label>
+            <Select
+              value={filter.outlet ?? SEMUA_OUTLET}
+              onValueChange={(v) =>
+                terapkan({
+                  ...filter,
+                  outlet: v === SEMUA_OUTLET ? undefined : v,
+                })
+              }
+            >
+              <SelectTrigger id="outlet" className="w-48">
+                <SelectValue placeholder="Semua outlet" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEMUA_OUTLET}>Semua outlet</SelectItem>
+                {pilihanOutlet.map((o) => (
+                  <SelectItem key={o.outlet_code} value={o.outlet_code}>
+                    {o.outlet_code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        <div className="flex gap-1.5">
+          {PRESET.map((p) => (
+            <Button
+              key={p.hari}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => pakaiPreset(p.hari)}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
       </div>
+      {terlaluPanjang ? (
+        <p role="alert" className="text-sm text-destructive">
+          Rentang tanggal paling panjang {MAKS_HARI_RENTANG} hari. Persempit
+          tanggalnya supaya laporan bisa dimuat.
+        </p>
+      ) : null}
     </div>
   );
 }

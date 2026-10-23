@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { ApiError } from "@/lib/api/client";
+import { bolehDiulang } from "@/lib/api/retry";
 
 let browserQueryClient: QueryClient | undefined;
 
@@ -14,12 +14,7 @@ function makeQueryClient() {
         // Data penjualan tidak berubah tiap detik; satu menit cukup untuk
         // menghindari request ulang saat pindah-pindah halaman.
         staleTime: 60_000,
-        retry(failureCount, error) {
-          // 4xx tidak akan berubah kalau diulang — hanya 5xx dan gangguan
-          // jaringan yang layak dicoba lagi. 401 sudah ditangani proxy BFF.
-          if (error instanceof ApiError && error.status < 500) return false;
-          return failureCount < 2;
-        },
+        retry: bolehDiulang,
       },
     },
   });

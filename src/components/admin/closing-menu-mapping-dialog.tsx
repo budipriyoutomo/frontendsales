@@ -64,8 +64,9 @@ export function ClosingMenuMappingDialog({
   const kandidat = useQuery({
     queryKey: ["product-menu-candidates", "", "", cariTerkirim],
     enabled: menuId !== null && cariTerkirim !== "",
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.request<ProductMenuCandidate[]>("/api/product-menus/candidates", {
+        signal,
         query: { q: cariTerkirim },
       }),
   });

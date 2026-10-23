@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAKS_HARI_RENTANG,
+  panjangRentangHari,
   bacaFilter,
   filterKeQuery,
   filterKeSearchParams,
@@ -177,5 +179,24 @@ describe("filter brand", () => {
       end_date: "2026-01-31",
       brand: "MHR",
     });
+  });
+});
+
+describe("batas rentang laporan", () => {
+  it("sama dengan batas backend (REPORT_MAX_RANGE_DAYS)", () => {
+    expect(MAKS_HARI_RENTANG).toBe(366);
+  });
+
+  it("menghitung selisih hari tanpa terpengaruh zona waktu", () => {
+    expect(
+      panjangRentangHari({ start_date: "2026-01-01", end_date: "2026-01-01" }),
+    ).toBe(0);
+    expect(
+      panjangRentangHari({ start_date: "2025-01-01", end_date: "2026-01-01" }),
+    ).toBe(365);
+    // Melewati pergantian bulan & tahun kabisat.
+    expect(
+      panjangRentangHari({ start_date: "2024-02-28", end_date: "2024-03-01" }),
+    ).toBe(2);
   });
 });
