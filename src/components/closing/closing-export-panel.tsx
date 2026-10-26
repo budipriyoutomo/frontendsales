@@ -33,6 +33,7 @@ import {
 import { ClosingExportDetailDialog } from "@/components/closing/closing-export-detail-dialog";
 import { CaraKerja } from "@/components/layout/page-header";
 import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 import {
   LIMIT_LAPORAN,
   useClosingExportStatus,
@@ -119,6 +120,9 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
   }
 
   const baris = status.data ?? [];
+  const paginasi = usePaginasiKlien(baris, {
+    kunciReset: JSON.stringify(filter),
+  });
 
   return (
     <div className="space-y-6">
@@ -153,75 +157,87 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
               keterangan="Tidak ada closing pada rentang tanggal produksi ini."
             />
           ) : (
-            <div
-              className={cn(
-                "overflow-x-auto",
-                status.isFetching && "opacity-60 transition-opacity",
-              )}
-            >
-              <Table aria-label="Status kirim per outlet dan tanggal produksi">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tgl. produksi</TableHead>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead className="text-right">Item</TableHead>
-                    <TableHead className="text-right">Total Sold</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Kiriman terakhir</TableHead>
-                    <TableHead className="w-40" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {baris.map((p) => (
-                    <TableRow key={`${p.outlet_code}-${p.production_date}`}>
-                      <TableCell className="whitespace-nowrap">
-                        {formatTanggal(p.production_date)}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {p.outlet_code}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatAngka(p.item_count)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatAngka(p.total_sold)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <StatusKirimBadge status={p.status} />
-                          <AlasanBlokir pasangan={p} />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <KirimanTerakhir log={p.last_attempt} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          {bisaDiulang(p.last_attempt) ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={ulangi.isPending}
-                              onClick={() => jalankanUlangi(p.last_attempt!.id)}
-                              aria-label={`Ulangi kiriman ${p.outlet_code} ${formatTanggal(p.production_date)}`}
-                            >
-                              Ulangi
-                            </Button>
-                          ) : null}
-                          <Button
-                            size="sm"
-                            disabled={!p.can_send}
-                            onClick={() => setKonfirmasi(p)}
-                            aria-label={`Kirim ${p.outlet_code} ${formatTanggal(p.production_date)}`}
-                          >
-                            Kirim
-                          </Button>
-                        </div>
-                      </TableCell>
+            <div>
+              <div
+                className={cn(
+                  "overflow-x-auto",
+                  status.isFetching && "opacity-60 transition-opacity",
+                )}
+              >
+                <Table aria-label="Status kirim per outlet dan tanggal produksi">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tgl. produksi</TableHead>
+                      <TableHead>Outlet</TableHead>
+                      <TableHead className="text-right">Item</TableHead>
+                      <TableHead className="text-right">Total Sold</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Kiriman terakhir</TableHead>
+                      <TableHead className="w-40" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginasi.halaman.map((p) => (
+                      <TableRow key={`${p.outlet_code}-${p.production_date}`}>
+                        <TableCell className="whitespace-nowrap">
+                          {formatTanggal(p.production_date)}
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {p.outlet_code}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatAngka(p.item_count)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatAngka(p.total_sold)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <StatusKirimBadge status={p.status} />
+                            <AlasanBlokir pasangan={p} />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <KirimanTerakhir log={p.last_attempt} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            {bisaDiulang(p.last_attempt) ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={ulangi.isPending}
+                                onClick={() =>
+                                  jalankanUlangi(p.last_attempt!.id)
+                                }
+                                aria-label={`Ulangi kiriman ${p.outlet_code} ${formatTanggal(p.production_date)}`}
+                              >
+                                Ulangi
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              disabled={!p.can_send}
+                              onClick={() => setKonfirmasi(p)}
+                              aria-label={`Kirim ${p.outlet_code} ${formatTanggal(p.production_date)}`}
+                            >
+                              Kirim
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={paginasi.offset}
+                limit={paginasi.limit}
+                pagination={paginasi.pagination}
+                satuan="rekap"
+                onPindah={paginasi.setOffset}
+              />
             </div>
           )}
         </CardContent>

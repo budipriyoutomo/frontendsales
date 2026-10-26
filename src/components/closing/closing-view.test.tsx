@@ -362,6 +362,39 @@ describe("ClosingView — perbandingan POS", () => {
     ).toHaveAttribute("href", "/closing-menu");
   });
 
+  it("dipaginasi di klien; ringkasan tetap dari seluruh baris", async () => {
+    const banyak = Array.from({ length: 51 }, (_, i) =>
+      baris(`Menu ${i + 1}`, {
+        menu_id: `0a1b2c3d-4e5f-4a7b-8c9d-${String(i).padStart(12, "0")}`,
+        // Satu-satunya menu belum dipetakan ada di halaman kedua.
+        ...(i === 50 ? { products: [], pos_qty: null } : {}),
+      }),
+    );
+    server.use(
+      http.get("/api/closing-reports/comparison", ({ request }) => {
+        permintaanComparison.push(new URL(request.url).searchParams);
+        return HttpResponse.json({ success: true, data: banyak });
+      }),
+    );
+    renderWithQuery(<ClosingView role="admin" />);
+    const user = userEvent.setup();
+
+    await screen.findByText("Menu 1");
+    expect(screen.queryByText("Menu 51")).toBeNull();
+    expect(screen.getByText(/1 menu belum punya angka POS/)).toBeVisible();
+    expect(screen.getByText(/Halaman 1 dari 2 · 51 baris/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("Menu 51")).toBeVisible();
+
+    // Filter berubah → kembali ke halaman pertama.
+    await user.click(
+      screen.getByRole("switch", { name: /ikutkan transaksi void/i }),
+    );
+    expect(await screen.findByText("Menu 1")).toBeVisible();
+    expect(screen.getByText(/Halaman 1 dari 2/)).toBeVisible();
+  });
+
   it("non-admin tidak ditawari halaman mapping", async () => {
     renderWithQuery(<ClosingView role="manager" />);
 
