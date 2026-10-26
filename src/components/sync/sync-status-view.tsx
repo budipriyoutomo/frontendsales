@@ -30,6 +30,8 @@ import {
   type Kesegaran,
 } from "@/lib/sync-status";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 
 const IKON: Record<Kesegaran, typeof CheckCircle2> = {
   segar: CheckCircle2,
@@ -47,6 +49,10 @@ const IKON: Record<Kesegaran, typeof CheckCircle2> = {
 export function SyncStatusView() {
   const query = useSyncStatus();
   const sekarang = new Date();
+  // Paling mendesak dulu, baru dipotong per halaman.
+  const paginasi = usePaginasiKlien(
+    urutkanMendesak(query.data ?? [], sekarang),
+  );
 
   return (
     <div className="space-y-6">
@@ -67,53 +73,63 @@ export function SyncStatusView() {
               keterangan="Belum ada outlet yang terdaftar mengirim data."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Terakhir sync</TableHead>
-                    <TableHead>Penjualan terakhir</TableHead>
-                    <TableHead className="text-right">Transaksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {urutkanMendesak(query.data ?? [], sekarang).map((row) => {
-                    const k = nilaiKesegaran(row, sekarang);
-                    const Ikon = IKON[k];
+            <div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Outlet</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Terakhir sync</TableHead>
+                      <TableHead>Penjualan terakhir</TableHead>
+                      <TableHead className="text-right">Transaksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginasi.halaman.map((row) => {
+                      const k = nilaiKesegaran(row, sekarang);
+                      const Ikon = IKON[k];
 
-                    return (
-                      <TableRow key={row.outlet_code}>
-                        <TableCell className="font-medium">
-                          {row.outlet_code ?? "—"}
-                        </TableCell>
-                        <TableCell>
-                          {/* Ikon + teks, supaya status tidak bergantung
+                      return (
+                        <TableRow key={row.outlet_code}>
+                          <TableCell className="font-medium">
+                            {row.outlet_code ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            {/* Ikon + teks, supaya status tidak bergantung
                               pada warna saja. */}
-                          <Badge variant={varianBadge(k)} className="gap-1.5">
-                            <Ikon aria-hidden className="size-3.5" />
-                            {labelKesegaran(k)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {/* Outlet yang belum pernah sync tidak merender
+                            <Badge variant={varianBadge(k)} className="gap-1.5">
+                              <Ikon aria-hidden className="size-3.5" />
+                              {labelKesegaran(k)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {/* Outlet yang belum pernah sync tidak merender
                               tanggal kosong (7.5). */}
-                          {k === "belum-pernah"
-                            ? "Belum pernah"
-                            : formatTanggalWaktuUtc(row.last_synced_at)}
-                        </TableCell>
-                        <TableCell>
-                          {formatTanggal(row.last_sale_date)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatAngka(row.total_transactions)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                            {k === "belum-pernah"
+                              ? "Belum pernah"
+                              : formatTanggalWaktuUtc(row.last_synced_at)}
+                          </TableCell>
+                          <TableCell>
+                            {formatTanggal(row.last_sale_date)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatAngka(row.total_transactions)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={paginasi.offset}
+                limit={paginasi.limit}
+                pagination={paginasi.pagination}
+                satuan="outlet"
+                onPindah={paginasi.setOffset}
+              />
             </div>
           )}
         </CardContent>

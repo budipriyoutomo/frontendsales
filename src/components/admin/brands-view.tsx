@@ -46,6 +46,8 @@ import {
 } from "@/lib/brand";
 import type { Brand, OutletBrand } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 
 /** Nilai sentinel — `Select` tidak menerima item bernilai string kosong. */
 const TANPA_BRAND = "__tanpa__";
@@ -184,6 +186,8 @@ export function BrandsView() {
 
   const semuaBrand = brands.data ?? [];
   const brandAktif = semuaBrand.filter((b) => b.is_active);
+  const paginasiBrand = usePaginasiKlien(semuaBrand);
+  const paginasiOutlet = usePaginasiKlien(outlets.data ?? []);
   const pratinjau = normalisasiKodeBrand(kode);
   const galatUbahNama = ubah ? validasiNamaBrand(ubah.name) : null;
 
@@ -302,55 +306,65 @@ export function BrandsView() {
                 keterangan="Tambahkan brand pertama di atas, lalu petakan outlet ke brand itu."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Kode</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Outlet</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {semuaBrand.map((b) => (
-                      <TableRow key={b.id}>
-                        <TableCell className="font-mono font-medium">
-                          {b.code}
-                        </TableCell>
-                        <TableCell>{b.name}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {b.outlet_codes?.length ? (
-                            b.outlet_codes.join(", ")
-                          ) : (
-                            <span className="text-muted-foreground font-sans">
-                              Belum ada
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Status aktif={b.is_active} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setUbah({
-                                brand: b,
-                                name: b.name,
-                                is_active: b.is_active,
-                              })
-                            }
-                          >
-                            Ubah
-                          </Button>
-                        </TableCell>
+              <div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Kode</TableHead>
+                        <TableHead>Nama</TableHead>
+                        <TableHead>Outlet</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginasiBrand.halaman.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell className="font-mono font-medium">
+                            {b.code}
+                          </TableCell>
+                          <TableCell>{b.name}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {b.outlet_codes?.length ? (
+                              b.outlet_codes.join(", ")
+                            ) : (
+                              <span className="text-muted-foreground font-sans">
+                                Belum ada
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Status aktif={b.is_active} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setUbah({
+                                  brand: b,
+                                  name: b.name,
+                                  is_active: b.is_active,
+                                })
+                              }
+                            >
+                              Ubah
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <Paginasi
+                  offset={paginasiBrand.offset}
+                  limit={paginasiBrand.limit}
+                  pagination={paginasiBrand.pagination}
+                  satuan="brand"
+                  onPindah={paginasiBrand.setOffset}
+                />
               </div>
             )}
           </CardContent>
@@ -388,79 +402,89 @@ export function BrandsView() {
                 keterangan="Outlet muncul di sini setelah API key-nya dibuat."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Outlet</TableHead>
-                      <TableHead>API key</TableHead>
-                      <TableHead>Brand</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(outlets.data ?? []).map((o) => {
-                      const brandSekarang = semuaBrand.find(
-                        (b) => b.id === o.brand_id,
-                      );
-                      return (
-                        <TableRow key={o.outlet_code}>
-                          <TableCell className="font-mono font-medium">
-                            {o.outlet_code}
-                          </TableCell>
-                          <TableCell>
-                            <Status aktif={o.is_active} />
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={
-                                o.brand_id != null
-                                  ? String(o.brand_id)
-                                  : TANPA_BRAND
-                              }
-                              disabled={petakan.isPending}
-                              onValueChange={(v) =>
-                                petakan.mutate({
-                                  outlet_code: o.outlet_code,
-                                  brand_id:
-                                    v === TANPA_BRAND ? null : Number(v),
-                                })
-                              }
-                            >
-                              <SelectTrigger
-                                className="w-56"
-                                aria-label={`Brand untuk ${o.outlet_code}`}
+              <div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Outlet</TableHead>
+                        <TableHead>API key</TableHead>
+                        <TableHead>Brand</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginasiOutlet.halaman.map((o) => {
+                        const brandSekarang = semuaBrand.find(
+                          (b) => b.id === o.brand_id,
+                        );
+                        return (
+                          <TableRow key={o.outlet_code}>
+                            <TableCell className="font-mono font-medium">
+                              {o.outlet_code}
+                            </TableCell>
+                            <TableCell>
+                              <Status aktif={o.is_active} />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={
+                                  o.brand_id != null
+                                    ? String(o.brand_id)
+                                    : TANPA_BRAND
+                                }
+                                disabled={petakan.isPending}
+                                onValueChange={(v) =>
+                                  petakan.mutate({
+                                    outlet_code: o.outlet_code,
+                                    brand_id:
+                                      v === TANPA_BRAND ? null : Number(v),
+                                  })
+                                }
                               >
-                                <SelectValue placeholder="Tanpa brand" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={TANPA_BRAND}>
-                                  Tanpa brand
-                                </SelectItem>
-                                {brandAktif.map((b) => (
-                                  <SelectItem key={b.id} value={String(b.id)}>
-                                    {b.name} ({b.code})
+                                <SelectTrigger
+                                  className="w-56"
+                                  aria-label={`Brand untuk ${o.outlet_code}`}
+                                >
+                                  <SelectValue placeholder="Tanpa brand" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={TANPA_BRAND}>
+                                    Tanpa brand
                                   </SelectItem>
-                                ))}
-                                {/* Brand nonaktif yang masih dipegang outlet
+                                  {brandAktif.map((b) => (
+                                    <SelectItem key={b.id} value={String(b.id)}>
+                                      {b.name} ({b.code})
+                                    </SelectItem>
+                                  ))}
+                                  {/* Brand nonaktif yang masih dipegang outlet
                                     tetap ditampilkan, supaya nilainya tidak
                                     tampak kosong. */}
-                                {brandSekarang && !brandSekarang.is_active ? (
-                                  <SelectItem
-                                    value={String(brandSekarang.id)}
-                                    disabled
-                                  >
-                                    {brandSekarang.name} ({brandSekarang.code})
-                                    — nonaktif
-                                  </SelectItem>
-                                ) : null}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                                  {brandSekarang && !brandSekarang.is_active ? (
+                                    <SelectItem
+                                      value={String(brandSekarang.id)}
+                                      disabled
+                                    >
+                                      {brandSekarang.name} ({brandSekarang.code}
+                                      ) — nonaktif
+                                    </SelectItem>
+                                  ) : null}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <Paginasi
+                  offset={paginasiOutlet.offset}
+                  limit={paginasiOutlet.limit}
+                  pagination={paginasiOutlet.pagination}
+                  satuan="outlet"
+                  onPindah={paginasiOutlet.setOffset}
+                />
               </div>
             )}
           </CardContent>

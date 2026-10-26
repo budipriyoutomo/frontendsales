@@ -38,8 +38,9 @@ function pesanGagal(error: unknown, cadangan: string) {
 /**
  * Mapping ProductID POS per outlet ke satu produk master.
  *
- * Produk diambil dari daftar `["products"]` supaya dialog langsung ikut
- * berubah setelah mutasi. Tidak ada hapus — mapping dimatikan; ProductID
+ * Produk diambil lewat detailnya (bukan dari daftar — daftar dipaginasi, jadi
+ * produk ini belum tentu ada di halaman yang termuat). Kuncinya di bawah
+ * `["products"]` supaya ikut segar setelah mutasi. Tidak ada hapus — mapping dimatikan; ProductID
  * yang masih aktif di produk lain harus dinonaktifkan dulu di sana.
  */
 export function ProductPosMappingDialog({
@@ -52,13 +53,13 @@ export function ProductPosMappingDialog({
   const qc = useQueryClient();
   const terbuka = productId !== null;
 
-  const products = useQuery({
-    queryKey: ["products"],
+  const detail = useQuery({
+    queryKey: ["products", "detail", productId],
     enabled: terbuka,
     queryFn: ({ signal }) =>
-      api.request<Product[]>("/api/products", { signal }),
+      api.request<Product>(`/api/products/${productId}`, { signal }),
   });
-  const produk = products.data?.find((p) => p.id === productId) ?? null;
+  const produk = detail.data ?? null;
 
   const outlets = useOutlets(terbuka);
 
@@ -143,7 +144,7 @@ export function ProductPosMappingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {products.isPending ? (
+        {detail.isPending ? (
           <KartuSkeleton baris={3} />
         ) : (
           <div className="max-h-[70vh] space-y-6 overflow-y-auto">

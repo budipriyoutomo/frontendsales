@@ -40,10 +40,12 @@ const kandidat = [
 ];
 
 let terdaftar: Record<string, unknown>[];
+let permintaanDaftar: URLSearchParams[];
 
 beforeEach(() => {
   toastError.mockClear();
   toastSuccess.mockClear();
+  permintaanDaftar = [];
   terdaftar = [
     {
       id: 1,
@@ -56,9 +58,23 @@ beforeEach(() => {
     },
   ];
   server.use(
-    http.get("/api/product-menus", () =>
-      HttpResponse.json({ success: true, data: terdaftar }),
-    ),
+    http.get("/api/product-menus", ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      permintaanDaftar.push(params);
+      const limit = Number(params.get("limit") ?? 50);
+      const offset = Number(params.get("offset") ?? 0);
+      const data = terdaftar.slice(offset, offset + limit);
+      return HttpResponse.json({
+        success: true,
+        data,
+        pagination: {
+          limit,
+          offset,
+          total: terdaftar.length,
+          has_more: offset + data.length < terdaftar.length,
+        },
+      });
+    }),
     http.get("/api/product-menus/candidates", ({ request }) => {
       const params = new URL(request.url).searchParams;
       const q = params.get("q");
@@ -70,7 +86,15 @@ beforeEach(() => {
       if (outlet) {
         data = data.filter((k) => k.outlet_codes.includes(outlet));
       }
-      return HttpResponse.json({ success: true, data });
+      // Server menandai kandidat yang sudah terdaftar lewat `mapping_id`.
+      const idMapping = new Map(terdaftar.map((m) => [m.product_id, m.id]));
+      return HttpResponse.json({
+        success: true,
+        data: data.map((k) => ({
+          ...k,
+          mapping_id: idMapping.get(k.product_id) ?? null,
+        })),
+      });
     }),
     http.get("/api/outlets", () =>
       HttpResponse.json({
@@ -98,6 +122,12 @@ beforeEach(() => {
     http.get("/api/product-menus/platecolors", () =>
       HttpResponse.json({ success: true, data: ["BLUE", "RED"] }),
     ),
+    http.get("/api/product-menus/:id", ({ params }) => {
+      const m = terdaftar.find((x) => x.id === Number(params.id));
+      return m
+        ? HttpResponse.json({ success: true, data: m })
+        : HttpResponse.json({ detail: "tidak ada" }, { status: 404 });
+    }),
     http.get("/api/sales/product-groups", () =>
       HttpResponse.json({
         success: true,
@@ -150,24 +180,23 @@ describe("ProductMenusView — mapping per menu", () => {
     expect(screen.getByText("Blue")).toBeVisible();
   });
 
-  it("menambah menu dengan mengirim product_id saja", async () => {
+  it("menambah menu dengan mengirim product_id saja, lalu membuka dialog warnanya", async () => {
     let body: unknown;
     server.use(
       http.post("/api/product-menus", async ({ request }) => {
         body = await request.json();
+        const baru = {
+          id: 2,
+          product_id: 200300,
+          product_name: "F birthday cake",
+          product_group: "PROMO",
+          is_active: true,
+          created_at: "2026-09-16T08:00:00",
+          updated_at: null,
+        };
+        terdaftar.push(baru);
         return HttpResponse.json(
-          {
-            success: true,
-            data: {
-              id: 2,
-              product_id: 200300,
-              product_name: "F birthday cake",
-              product_group: "PROMO",
-              is_active: true,
-              created_at: "2026-09-16T08:00:00",
-              updated_at: null,
-            },
-          },
+          { success: true, data: baru },
           { status: 201 },
         );
       }),
@@ -181,6 +210,37 @@ describe("ProductMenusView — mapping per menu", () => {
 
     await waitFor(() => expect(body).toEqual({ product_id: 200300 }));
     expect(toastSuccess).toHaveBeenCalled();
+    // Dialog diisi dari detail, bukan dari halaman daftar yang termuat.
+    expect(await screen.findByRole("dialog")).toBeVisible();
+    // Kandidat dimuat ulang, jadi penandanya ikut berubah.
+    await waitFor(() => {
+      const baris = screen
+        .getAllByText("F birthday cake")
+        .map((el) => el.closest("tr")!)
+        .find((tr) => within(tr).queryByText("PROMO"));
+      expect(within(baris!).getByText("Terdaftar")).toBeInTheDocument();
+    });
+  });
+
+  it("daftar menu terdaftar dipaginasi", async () => {
+    terdaftar = Array.from({ length: 51 }, (_, i) => ({
+      id: i + 1,
+      product_id: 400000 + i,
+      product_name: `Menu ${i + 1}`,
+      product_group: "PROMO",
+      is_active: true,
+      created_at: "2026-09-01T08:00:00",
+      updated_at: null,
+    }));
+    renderWithQuery(<ProductMenusView />);
+    const user = userEvent.setup();
+
+    await screen.findByText("Menu 1");
+    expect(screen.getByText(/Halaman 1 dari 2 · 51 menu/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(await screen.findByText("Menu 51")).toBeVisible();
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("50");
   });
 
   it("409 tampil sebagai 'sudah terdaftar', bukan galat umum", async () => {

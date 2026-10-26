@@ -47,6 +47,8 @@ import {
 } from "@/lib/user-guard";
 import type { UserAdmin } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 
 const ROLE = ["admin", "manager", "outlet"] as const;
 
@@ -68,6 +70,7 @@ export function UsersView({ sayaId }: { sayaId: number }) {
   });
 
   const semua = daftar.data ?? [];
+  const paginasi = usePaginasiKlien(semua);
   const segarkan = () => qc.invalidateQueries({ queryKey: ["users"] });
 
   const buat = useMutation({
@@ -237,102 +240,112 @@ export function UsersView({ sayaId }: { sayaId: number }) {
               keterangan="Buat pengguna pertama lewat form di atas."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {semua.map((u) => {
-                    const putusan = bolehNonaktifkan(u, sayaId, semua);
-                    const akunSaya = u.id === sayaId;
+            <div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Outlet</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Dibuat</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginasi.halaman.map((u) => {
+                      const putusan = bolehNonaktifkan(u, sayaId, semua);
+                      const akunSaya = u.id === sayaId;
 
-                    return (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">
-                          {u.email}
-                          {akunSaya ? (
-                            <Badge variant="outline" className="ml-2">
-                              Anda
-                            </Badge>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>{u.full_name ?? "—"}</TableCell>
-                        <TableCell>{u.role}</TableCell>
-                        <TableCell>{u.outlet_code ?? "—"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={u.is_active ? "secondary" : "outline"}
-                          >
-                            {u.is_active ? "Aktif" : "Nonaktif"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {formatTanggalWaktuUtc(u.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setResetUntuk(u)}
+                      return (
+                        <TableRow key={u.id}>
+                          <TableCell className="font-medium">
+                            {u.email}
+                            {akunSaya ? (
+                              <Badge variant="outline" className="ml-2">
+                                Anda
+                              </Badge>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>{u.full_name ?? "—"}</TableCell>
+                          <TableCell>{u.role}</TableCell>
+                          <TableCell>{u.outlet_code ?? "—"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={u.is_active ? "secondary" : "outline"}
                             >
-                              Reset sandi
-                            </Button>
+                              {u.is_active ? "Aktif" : "Nonaktif"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {formatTanggalWaktuUtc(u.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setResetUntuk(u)}
+                              >
+                                Reset sandi
+                              </Button>
 
-                            {u.is_active ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!putusan.boleh || ubah.isPending}
-                                // Alasan tetap terbaca walau tombolnya mati.
-                                title={
-                                  putusan.boleh ? undefined : putusan.alasan
-                                }
-                                onClick={() =>
-                                  ubah.mutate({
-                                    id: u.id,
-                                    patch: { is_active: false },
-                                  })
-                                }
-                              >
-                                Nonaktifkan
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={ubah.isPending}
-                                onClick={() =>
-                                  ubah.mutate({
-                                    id: u.id,
-                                    patch: { is_active: true },
-                                  })
-                                }
-                              >
-                                Aktifkan
-                              </Button>
-                            )}
-                          </div>
-                          {!putusan.boleh && u.is_active ? (
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {putusan.alasan}
-                            </p>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                              {u.is_active ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={!putusan.boleh || ubah.isPending}
+                                  // Alasan tetap terbaca walau tombolnya mati.
+                                  title={
+                                    putusan.boleh ? undefined : putusan.alasan
+                                  }
+                                  onClick={() =>
+                                    ubah.mutate({
+                                      id: u.id,
+                                      patch: { is_active: false },
+                                    })
+                                  }
+                                >
+                                  Nonaktifkan
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={ubah.isPending}
+                                  onClick={() =>
+                                    ubah.mutate({
+                                      id: u.id,
+                                      patch: { is_active: true },
+                                    })
+                                  }
+                                >
+                                  Aktifkan
+                                </Button>
+                              )}
+                            </div>
+                            {!putusan.boleh && u.is_active ? (
+                              <p className="text-muted-foreground mt-1 text-xs">
+                                {putusan.alasan}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={paginasi.offset}
+                limit={paginasi.limit}
+                pagination={paginasi.pagination}
+                satuan="pengguna"
+                onPindah={paginasi.setOffset}
+              />
             </div>
           )}
         </CardContent>

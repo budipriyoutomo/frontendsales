@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { CheckCircle2, CircleOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -51,6 +57,12 @@ import {
   validasiTeksOpsional,
 } from "@/lib/product";
 import type { Brand, Product } from "@/types/domain";
+
+/** Sama dengan default backend; maksimumnya 200. */
+const LIMIT_PRODUK = 50;
+
+/** Jeda sebelum pencarian dikirim — satu request per ketikan terlalu boros. */
+const JEDA_CARI_MS = 300;
 
 /** Wajib: ProductID, Product Code, nama, brand. Sisanya opsional. */
 type IsiForm = {
@@ -147,34 +159,34 @@ function PesanGalat({ id, pesan }: { id: string; pesan?: string | null }) {
   ) : null;
 }
 
-function cocok(p: Product, kata: string) {
-  if (!kata) return true;
-  const k = kata.toUpperCase();
-  return [
-    p.code,
-    p.product_code,
-    p.name,
-    p.category,
-    p.subcategory,
-    p.brand?.code,
-    p.brand?.name,
-  ].some((v) => v?.toUpperCase().includes(k));
-}
-
 export function ProductsView() {
   const [cari, setCari] = useState("");
+  const [cariTerkirim, setCariTerkirim] = useState("");
+  const [offset, setOffset] = useState(0);
   const [sasaran, setSasaran] = useState<Sasaran>(null);
   const [mappingId, setMappingId] = useState<number | null>(null);
   const [imporBuka, setImporBuka] = useState(false);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setCariTerkirim(cari.trim());
+      // Kata cari baru → mulai lagi dari halaman pertama.
+      setOffset(0);
+    }, JEDA_CARI_MS);
+    return () => clearTimeout(t);
+  }, [cari]);
+
   const products = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", "list", cariTerkirim, offset],
+    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
-      api.request<Product[]>("/api/products", { signal }),
+      api.requestWithMeta<Product[]>("/api/products", {
+        signal,
+        query: { q: cariTerkirim || undefined, limit: LIMIT_PRODUK, offset },
+      }),
   });
 
-  const semua = products.data ?? [];
-  const tampil = semua.filter((p) => cocok(p, cari.trim()));
+  const tampil = products.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -227,7 +239,7 @@ export function ProductsView() {
               error={products.error}
               onCobaLagi={products.refetch}
             />
-          ) : semua.length === 0 ? (
+          ) : tampil.length === 0 && !cariTerkirim ? (
             <KeadaanKosong
               judul="Belum ada produk"
               keterangan="Tambahkan produk pertama, atau ambil dari transaksi POS yang sudah masuk."
@@ -238,81 +250,97 @@ export function ProductsView() {
               keterangan="Ubah kata pencarian."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ProductID</TableHead>
-                    <TableHead>Product Code</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Subkategori</TableHead>
-                    <TableHead>Brand</TableHead>
-                    <TableHead>ProductID POS</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tampil.map((p) => {
-                    const aktif = (p.pos_mappings ?? []).filter(
-                      (m) => m.is_active,
-                    ).length;
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-mono font-medium">
-                          {p.code}
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {p.product_code ?? <BelumDiisi />}
-                        </TableCell>
-                        <TableCell>{p.name}</TableCell>
-                        <TableCell>{p.category ?? "—"}</TableCell>
-                        <TableCell>{p.subcategory ?? "—"}</TableCell>
-                        <TableCell>
-                          {p.brand ? (
-                            <span className="font-mono">{p.brand.code}</span>
-                          ) : (
-                            <BelumDiisi />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {aktif ? (
-                            `${aktif} outlet`
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Belum dipetakan
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Status aktif={p.is_active} />
-                        </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">
-                          <div className="inline-flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setMappingId(p.id)}
-                              aria-label={`Mapping POS ${p.code}`}
-                            >
-                              Mapping POS
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSasaran(p)}
-                              aria-label={`Ubah ${p.code}`}
-                            >
-                              Ubah
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+            <div>
+              <div
+                className={
+                  products.isFetching
+                    ? "overflow-x-auto opacity-60 transition-opacity"
+                    : "overflow-x-auto"
+                }
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ProductID</TableHead>
+                      <TableHead>Product Code</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Subkategori</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>ProductID POS</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tampil.map((p) => {
+                      const aktif = (p.pos_mappings ?? []).filter(
+                        (m) => m.is_active,
+                      ).length;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-mono font-medium">
+                            {p.code}
+                          </TableCell>
+                          <TableCell className="font-mono">
+                            {p.product_code ?? <BelumDiisi />}
+                          </TableCell>
+                          <TableCell>{p.name}</TableCell>
+                          <TableCell>{p.category ?? "—"}</TableCell>
+                          <TableCell>{p.subcategory ?? "—"}</TableCell>
+                          <TableCell>
+                            {p.brand ? (
+                              <span className="font-mono">{p.brand.code}</span>
+                            ) : (
+                              <BelumDiisi />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {aktif ? (
+                              `${aktif} outlet`
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Belum dipetakan
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Status aktif={p.is_active} />
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <div className="inline-flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setMappingId(p.id)}
+                                aria-label={`Mapping POS ${p.code}`}
+                              >
+                                Mapping POS
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSasaran(p)}
+                                aria-label={`Ubah ${p.code}`}
+                              >
+                                Ubah
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={offset}
+                limit={LIMIT_PRODUK}
+                pagination={products.data?.pagination}
+                satuan="produk"
+                onPindah={setOffset}
+              />
             </div>
           )}
         </CardContent>

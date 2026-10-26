@@ -40,6 +40,8 @@ import {
 } from "@/lib/product-group";
 import type { ProductGroupMapping } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 
 /** Saran dibatasi supaya data penjualan yang ramai tidak menenggelamkan form. */
 const SARAN_MAKSIMAL = 12;
@@ -124,6 +126,9 @@ export function ProductGroupsView() {
   }
 
   const semua = daftar.data ?? [];
+  // Dipaginasi di klien: daftar lengkap tetap dibutuhkan untuk saran group
+  // (dan cek COLORPLATE di Menu satuan), sementara jumlah group POS kecil.
+  const paginasi = usePaginasiKlien(semua);
   const pratinjau = normalisasiGroup(nama);
   const saran = daftar.isSuccess
     ? saranGroup(diData.data ?? [], semua).slice(0, SARAN_MAKSIMAL)
@@ -256,64 +261,74 @@ export function ProductGroupsView() {
               keterangan="Tidak ada penjualan yang dipublish sampai group pertama ditambahkan di atas."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Group</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead>Diubah</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {semua.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-mono font-medium">
-                        {m.product_group}
-                      </TableCell>
-                      <TableCell>
-                        {/* Ikon + teks, tidak pernah warna saja (8.7). */}
-                        {m.is_active ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <CheckCircle2
-                              aria-hidden
-                              className="size-4 text-emerald-600 dark:text-emerald-500"
-                            />
-                            Aktif
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                            <CircleOff aria-hidden className="size-4" />
-                            Nonaktif
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {formatTanggalWaktuUtc(m.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        {formatTanggalWaktuUtc(m.updated_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setKonfirmasi({
-                              mapping: m,
-                              aktifkan: !m.is_active,
-                            })
-                          }
-                        >
-                          {m.is_active ? "Nonaktifkan" : "Aktifkan"}
-                        </Button>
-                      </TableCell>
+            <div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Group</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Dibuat</TableHead>
+                      <TableHead>Diubah</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginasi.halaman.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-mono font-medium">
+                          {m.product_group}
+                        </TableCell>
+                        <TableCell>
+                          {/* Ikon + teks, tidak pernah warna saja (8.7). */}
+                          {m.is_active ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <CheckCircle2
+                                aria-hidden
+                                className="size-4 text-emerald-600 dark:text-emerald-500"
+                              />
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                              <CircleOff aria-hidden className="size-4" />
+                              Nonaktif
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatTanggalWaktuUtc(m.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          {formatTanggalWaktuUtc(m.updated_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setKonfirmasi({
+                                mapping: m,
+                                aktifkan: !m.is_active,
+                              })
+                            }
+                          >
+                            {m.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={paginasi.offset}
+                limit={paginasi.limit}
+                pagination={paginasi.pagination}
+                satuan="group"
+                onPindah={paginasi.setOffset}
+              />
             </div>
           )}
         </CardContent>

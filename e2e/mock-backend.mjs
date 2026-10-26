@@ -1011,7 +1011,25 @@ const server = createServer(async (req, res) => {
           m.menu_code.toLowerCase().includes(q) ||
           m.menu_name.toLowerCase().includes(q),
       );
-    return json(res, 200, bungkus(data));
+    const limit = Number(url.searchParams.get("limit") ?? 50);
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const halaman = data.slice(offset, offset + limit);
+    return json(res, 200, {
+      ...bungkus(halaman),
+      pagination: {
+        limit,
+        offset,
+        total: data.length,
+        has_more: offset + halaman.length < data.length,
+      },
+    });
+  }
+
+  const detailMenu = /^\/api\/closing-menus\/(\d+)$/.exec(path);
+  if (detailMenu && method === "GET") {
+    const menu = state.closingMenus.find((m) => m.id === Number(detailMenu[1]));
+    if (!menu) return tolak(res, 404, "Menu closing tidak ditemukan");
+    return json(res, 200, bungkus(menuTampil(menu)));
   }
 
   const tambahProduk = /^\/api\/closing-menus\/(\d+)\/products$/.exec(path);

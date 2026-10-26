@@ -27,7 +27,12 @@ import {
   KeadaanKosong,
 } from "@/components/dashboard/states";
 import { ClosingMenuMappingDialog } from "@/components/admin/closing-menu-mapping-dialog";
-import { useClosingMenus, type StatusMenu } from "@/hooks/use-closing";
+import { Paginasi } from "@/components/layout/paginasi";
+import {
+  LIMIT_LAPORAN,
+  useClosingMenus,
+  type StatusMenu,
+} from "@/hooks/use-closing";
 import { formatTanggalWaktuUtc } from "@/lib/format";
 import type { ClosingMenu } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
@@ -60,15 +65,20 @@ export function ClosingMenusView() {
   const [status, setStatus] = useState<StatusMenu>("unmapped");
   const [cari, setCari] = useState("");
   const [cariTerkirim, setCariTerkirim] = useState("");
+  const [offset, setOffset] = useState(0);
   const [dipilihId, setDipilihId] = useState<number | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setCariTerkirim(cari.trim()), JEDA_CARI_MS);
+    const t = setTimeout(() => {
+      setCariTerkirim(cari.trim());
+      // Filter baru → mulai lagi dari halaman pertama.
+      setOffset(0);
+    }, JEDA_CARI_MS);
     return () => clearTimeout(t);
   }, [cari]);
 
-  const daftar = useClosingMenus(status, cariTerkirim);
-  const menus = daftar.data ?? [];
+  const daftar = useClosingMenus(status, cariTerkirim, offset);
+  const menus = daftar.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -99,7 +109,10 @@ export function ClosingMenusView() {
               <Label htmlFor="closing-menu-status">Status</Label>
               <Select
                 value={status}
-                onValueChange={(v) => setStatus(v as StatusMenu)}
+                onValueChange={(v) => {
+                  setStatus(v as StatusMenu);
+                  setOffset(0);
+                }}
               >
                 <SelectTrigger id="closing-menu-status" className="w-48">
                   <SelectValue />
@@ -145,51 +158,61 @@ export function ClosingMenusView() {
               }
             />
           ) : (
-            <div
-              className={
-                daftar.isFetching
-                  ? "overflow-x-auto opacity-60 transition-opacity"
-                  : "overflow-x-auto"
-              }
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Menu closing</TableHead>
-                    <TableHead>ProductID POS</TableHead>
-                    <TableHead>Terakhir terlihat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {menus.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>
-                        <div className="font-medium">{m.menu_name}</div>
-                        <div className="text-muted-foreground font-mono text-xs">
-                          {m.menu_code ?? "tanpa kode"}
-                          {m.brand_code ? ` · ${m.brand_code}` : ""}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <RingkasanMapping menu={m} />
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatTanggalWaktuUtc(m.last_seen_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDipilihId(m.id)}
-                        >
-                          Atur mapping
-                        </Button>
-                      </TableCell>
+            <div>
+              <div
+                className={
+                  daftar.isFetching
+                    ? "overflow-x-auto opacity-60 transition-opacity"
+                    : "overflow-x-auto"
+                }
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Menu closing</TableHead>
+                      <TableHead>ProductID POS</TableHead>
+                      <TableHead>Terakhir terlihat</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {menus.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell>
+                          <div className="font-medium">{m.menu_name}</div>
+                          <div className="text-muted-foreground font-mono text-xs">
+                            {m.menu_code ?? "tanpa kode"}
+                            {m.brand_code ? ` · ${m.brand_code}` : ""}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <RingkasanMapping menu={m} />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {formatTanggalWaktuUtc(m.last_seen_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDipilihId(m.id)}
+                          >
+                            Atur mapping
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={offset}
+                limit={LIMIT_LAPORAN}
+                pagination={daftar.data?.pagination}
+                satuan="menu"
+                onPindah={setOffset}
+              />
             </div>
           )}
         </CardContent>

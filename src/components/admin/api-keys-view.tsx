@@ -28,6 +28,8 @@ import { ApiError } from "@/lib/api/client";
 import { formatTanggalWaktuUtc } from "@/lib/format";
 import type { ApiKey } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
+import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 
 type KeyBaru = { outletCode: string; apiKey: string };
 type Konfirmasi = { aksi: "rotate" | "revoke"; outletCode: string };
@@ -51,6 +53,7 @@ export function ApiKeysView() {
     queryKey: ["api-keys"],
     queryFn: ({ signal }) => api.request<ApiKey[]>("/api/api-keys", { signal }),
   });
+  const paginasi = usePaginasiKlien(daftar.data ?? []);
 
   const segarkan = () => qc.invalidateQueries({ queryKey: ["api-keys"] });
 
@@ -166,67 +169,79 @@ export function ApiKeysView() {
               keterangan="Buat key pertama dengan mengisi kode outlet di atas."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead>Awalan key</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(daftar.data ?? []).map((k) => (
-                    <TableRow key={k.outlet_code}>
-                      <TableCell className="font-medium">
-                        {k.outlet_code}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {k.key_prefix ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={k.is_active ? "secondary" : "outline"}>
-                          {k.is_active ? "Aktif" : "Dicabut"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {formatTanggalWaktuUtc(k.created_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setKonfirmasi({
-                                aksi: "rotate",
-                                outletCode: k.outlet_code,
-                              })
-                            }
-                          >
-                            Rotate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!k.is_active}
-                            onClick={() =>
-                              setKonfirmasi({
-                                aksi: "revoke",
-                                outletCode: k.outlet_code,
-                              })
-                            }
-                          >
-                            Revoke
-                          </Button>
-                        </div>
-                      </TableCell>
+            <div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Outlet</TableHead>
+                      <TableHead>Awalan key</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Dibuat</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginasi.halaman.map((k) => (
+                      <TableRow key={k.outlet_code}>
+                        <TableCell className="font-medium">
+                          {k.outlet_code}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {k.key_prefix ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={k.is_active ? "secondary" : "outline"}
+                          >
+                            {k.is_active ? "Aktif" : "Dicabut"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {formatTanggalWaktuUtc(k.created_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setKonfirmasi({
+                                  aksi: "rotate",
+                                  outletCode: k.outlet_code,
+                                })
+                              }
+                            >
+                              Rotate
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!k.is_active}
+                              onClick={() =>
+                                setKonfirmasi({
+                                  aksi: "revoke",
+                                  outletCode: k.outlet_code,
+                                })
+                              }
+                            >
+                              Revoke
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={paginasi.offset}
+                limit={paginasi.limit}
+                pagination={paginasi.pagination}
+                satuan="API key"
+                onPindah={paginasi.setOffset}
+              />
             </div>
           )}
         </CardContent>

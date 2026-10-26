@@ -89,7 +89,25 @@ beforeEach(() => {
       if (status === "unmapped") data = data.filter((m) => !m.is_mapped);
       if (status === "mapped") data = data.filter((m) => m.is_mapped);
       if (q) data = data.filter((m) => m.menu_name.toLowerCase().includes(q));
-      return HttpResponse.json({ success: true, data });
+      const limit = Number(params.get("limit") ?? 50);
+      const offset = Number(params.get("offset") ?? 0);
+      const halaman = data.slice(offset, offset + limit);
+      return HttpResponse.json({
+        success: true,
+        data: halaman,
+        pagination: {
+          limit,
+          offset,
+          total: data.length,
+          has_more: offset + halaman.length < data.length,
+        },
+      });
+    }),
+    http.get("/api/closing-menus/:id", ({ params }) => {
+      const m = menus.find((x) => x.id === Number(params.id));
+      return m
+        ? HttpResponse.json({ success: true, data: m })
+        : HttpResponse.json({ detail: "tidak ada" }, { status: 404 });
     }),
     http.get("/api/product-menus/candidates", ({ request }) => {
       const q = new URL(request.url).searchParams.get("q") ?? "";
@@ -209,6 +227,28 @@ describe("ClosingMenusView — daftar", () => {
     expect(
       await screen.findByText(/berapa unit produk POS untuk 1 porsi menu/i),
     ).toBeVisible();
+  });
+
+  it("berpindah halaman; ganti status kembali ke halaman pertama", async () => {
+    menus = Array.from({ length: 51 }, (_, i) =>
+      menu(i + 1, `SU-${String(i + 1).padStart(3, "0")}`, `Menu ${i + 1}`),
+    );
+    renderWithQuery(<ClosingMenusView />);
+    const user = userEvent.setup();
+
+    await screen.findByText("Menu 1");
+    expect(screen.getByText(/Halaman 1 dari 2 · 51 menu/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(await screen.findByText("Menu 51")).toBeVisible();
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("50");
+
+    await user.click(screen.getByRole("combobox", { name: /status/i }));
+    await user.click(await screen.findByRole("option", { name: "Semua" }));
+    await waitFor(() =>
+      expect(permintaanDaftar.at(-1)!.get("status")).toBe("all"),
+    );
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("0");
   });
 
   it("pencarian dikirim ke server", async () => {

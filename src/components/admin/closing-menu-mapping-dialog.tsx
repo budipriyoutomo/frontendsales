@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KartuSkeleton } from "@/components/dashboard/states";
-import { useClosingMenus } from "@/hooks/use-closing";
+import { useClosingMenu } from "@/hooks/use-closing";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
 import type { ClosingMenuProduct, ProductMenuCandidate } from "@/types/domain";
@@ -34,8 +34,8 @@ function pesanGagal(error: unknown, cadangan: string) {
 /**
  * Mapping satu menu closing ke ProductID POS × pengali.
  *
- * Data menu diambil dari daftar "semua", bukan dari daftar yang sedang
- * disaring di halaman: menu yang baru dipetakan keluar dari saringan
+ * Data menu diambil lewat detailnya, bukan dari daftar yang sedang disaring
+ * dan dipaginasi di halaman: menu yang baru dipetakan keluar dari saringan
  * "belum dipetakan", dan dialog tidak boleh ikut tertutup karenanya.
  *
  * Tidak ada hapus — mapping dimatikan, sama seperti mapping lain.
@@ -48,8 +48,8 @@ export function ClosingMenuMappingDialog({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const semua = useClosingMenus("all", "");
-  const menu = semua.data?.find((m) => m.id === menuId) ?? null;
+  const detail = useClosingMenu(menuId);
+  const menu = detail.data ?? null;
 
   const [cari, setCari] = useState("");
   const [cariTerkirim, setCariTerkirim] = useState("");
@@ -149,7 +149,7 @@ export function ClosingMenuMappingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {semua.isPending ? (
+        {detail.isPending ? (
           <KartuSkeleton baris={3} />
         ) : (
           <div className="max-h-[70vh] space-y-6 overflow-y-auto">

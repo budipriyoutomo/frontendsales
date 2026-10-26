@@ -186,6 +186,9 @@ export interface paths {
          *
          *     Berbeda dari `/api/product-groups` (admin): itu daftar group yang
          *     DIPUBLISH, ini daftar group yang ADA di data.
+         *
+         *     Dashboard sebaiknya mengirim rentang filternya — tanpa rentang, seluruh
+         *     `orderdetail` dipindai.
          */
         get: operations["list_product_groups_api_sales_product_groups_get"];
         put?: never;
@@ -573,7 +576,7 @@ export interface paths {
         };
         /**
          * List Product Menus
-         * @description Semua mapping menu, termasuk yang nonaktif.
+         * @description Mapping menu, termasuk yang nonaktif.
          */
         get: operations["list_product_menus_api_product_menus_get"];
         put?: never;
@@ -638,7 +641,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Product Menu
+         * @description Satu menu beserta konversi warnanya — dipakai dialog, lepas dari halaman daftar.
+         */
+        get: operations["get_product_menu_api_product_menus__mapping_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -781,7 +788,7 @@ export interface paths {
         };
         /**
          * List Products
-         * @description Semua produk, termasuk yang nonaktif, beserta mapping POS-nya.
+         * @description Produk, termasuk yang nonaktif, beserta mapping POS-nya.
          */
         get: operations["list_products_api_products_get"];
         put?: never;
@@ -927,6 +934,26 @@ export interface paths {
          * @description menuCode yang pernah muncul di closing report. `unmapped` = belum punya mapping aktif.
          */
         get: operations["list_closing_menus_api_closing_menus_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/closing-menus/{menu_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Closing Menu
+         * @description Satu menu beserta mapping-nya — dipakai dialog mapping, lepas dari halaman daftar.
+         */
+        get: operations["get_closing_menu_api_closing_menus__menu_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1580,6 +1607,15 @@ export interface components {
             /** Menu Name */
             menu_name?: string | null;
         };
+        /** ClosingMenuDetailResponse */
+        ClosingMenuDetailResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["ClosingMenuResponse"];
+        };
         /** ClosingMenuListResponse */
         ClosingMenuListResponse: {
             /**
@@ -1589,6 +1625,7 @@ export interface components {
             success: boolean;
             /** Data */
             data: components["schemas"]["ClosingMenuResponse"][];
+            pagination: components["schemas"]["PaginationMeta"];
         };
         /** ClosingMenuProductDetailResponse */
         ClosingMenuProductDetailResponse: {
@@ -2391,6 +2428,7 @@ export interface components {
             success: boolean;
             /** Data */
             data: components["schemas"]["ProductResponse"][];
+            pagination: components["schemas"]["PaginationMeta"];
         };
         /** ProductMenuCandidate */
         ProductMenuCandidate: {
@@ -2404,6 +2442,8 @@ export interface components {
             outlet_codes?: string[];
             /** Last Sale Date */
             last_sale_date?: string | null;
+            /** Mapping Id */
+            mapping_id?: number | null;
         };
         /** ProductMenuCandidateListResponse */
         ProductMenuCandidateListResponse: {
@@ -2457,6 +2497,7 @@ export interface components {
             success: boolean;
             /** Data */
             data: components["schemas"]["ProductMenuMappingResponse"][];
+            pagination: components["schemas"]["PaginationMeta"];
         };
         /** ProductMenuMappingResponse */
         ProductMenuMappingResponse: {
@@ -3525,6 +3566,10 @@ export interface operations {
             query?: {
                 /** @description Kode outlet; diabaikan untuk role 'outlet' */
                 outlet?: string | null;
+                /** @description Tanggal awal (inklusif); kosong = sejak awal */
+                start_date?: string | null;
+                /** @description Tanggal akhir (inklusif); kosong = sampai sekarang */
+                end_date?: string | null;
             };
             header?: never;
             path?: never;
@@ -4192,7 +4237,10 @@ export interface operations {
     };
     list_product_menus_api_product_menus_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4206,6 +4254,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductMenuMappingListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4296,6 +4353,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatecolorListResponse"];
+                };
+            };
+        };
+    };
+    get_product_menu_api_product_menus__mapping_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mapping_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductMenuMappingDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4551,7 +4639,12 @@ export interface operations {
     };
     list_products_api_products_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Cari ProductID, Product Code, nama, kategori, subkategori, atau brand */
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4565,6 +4658,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4848,6 +4950,8 @@ export interface operations {
                 status?: "all" | "mapped" | "unmapped";
                 /** @description Cari menuCode atau nama menu */
                 q?: string | null;
+                limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -4862,6 +4966,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClosingMenuListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_closing_menu_api_closing_menus__menu_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuDetailResponse"];
                 };
             };
             /** @description Validation Error */

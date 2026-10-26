@@ -69,10 +69,26 @@ const BRANDS = [
 ];
 
 let daftar: ReturnType<typeof produk>[];
+let permintaanDaftar: URLSearchParams[];
+
+/** Tiruan pencarian server: kolom yang sama dengan `product_service.list_products`. */
+function cocok(p: ReturnType<typeof produk>, kata: string) {
+  const k = kata.toUpperCase();
+  return [
+    p.code,
+    p.product_code,
+    p.name,
+    p.category,
+    p.subcategory,
+    p.brand?.code,
+    p.brand?.name,
+  ].some((v) => v?.toUpperCase().includes(k));
+}
 
 beforeEach(() => {
   toastError.mockClear();
   toastSuccess.mockClear();
+  permintaanDaftar = [];
   daftar = [
     produk(1, "P-001", "Red Plate", {
       category: "Plate",
@@ -85,9 +101,34 @@ beforeEach(() => {
     produk(2, "P-002", "Blue Plate", { is_active: false }),
   ];
   server.use(
-    http.get("/api/products", () =>
-      HttpResponse.json({ success: true, data: daftar }),
-    ),
+    http.get("/api/products", ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      permintaanDaftar.push(params);
+      const q = params.get("q") ?? "";
+      const limit = Number(params.get("limit") ?? 50);
+      const offset = Number(params.get("offset") ?? 0);
+      const cocokSemua = q ? daftar.filter((p) => cocok(p, q)) : daftar;
+      const data = cocokSemua.slice(offset, offset + limit);
+      return HttpResponse.json({
+        success: true,
+        data,
+        pagination: {
+          limit,
+          offset,
+          total: cocokSemua.length,
+          has_more: offset + data.length < cocokSemua.length,
+        },
+      });
+    }),
+    http.get("/api/products/:id", ({ params }) => {
+      const p = daftar.find((d) => d.id === Number(params.id));
+      return p
+        ? HttpResponse.json({ success: true, data: p })
+        : HttpResponse.json(
+            { detail: "Produk tidak ditemukan" },
+            { status: 404 },
+          );
+    }),
     http.get("/api/brands", () =>
       HttpResponse.json({ success: true, data: BRANDS }),
     ),
@@ -150,29 +191,50 @@ describe("ProductsView — daftar", () => {
     expect(within(row).getAllByText("Belum diisi")).toHaveLength(2);
   });
 
-  it("pencarian mencakup Product Code dan subkategori", async () => {
+  it("pencarian dikirim ke server", async () => {
     renderWithQuery(<ProductsView />);
     const user = userEvent.setup();
     await screen.findByText("Red Plate");
 
-    await user.type(screen.getByLabelText("Cari"), "sku-2");
-    expect(screen.queryByText("Red Plate")).not.toBeInTheDocument();
-    expect(screen.getByText("Blue Plate")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Cari"), "blue");
 
-    await user.clear(screen.getByLabelText("Cari"));
-    await user.type(screen.getByLabelText("Cari"), "nigiri");
-    expect(screen.getByText("Red Plate")).toBeInTheDocument();
-    expect(screen.queryByText("Blue Plate")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("Red Plate")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Blue Plate")).toBeInTheDocument();
+    expect(permintaanDaftar.at(-1)!.get("q")).toBe("blue");
   });
 
-  it("pencarian menyaring di sisi klien", async () => {
+  it("pencarian tanpa hasil", async () => {
     renderWithQuery(<ProductsView />);
     await screen.findByText("Red Plate");
 
-    await userEvent.setup().type(screen.getByLabelText("Cari"), "blue");
+    await userEvent.setup().type(screen.getByLabelText("Cari"), "zzz");
 
-    expect(screen.queryByText("Red Plate")).not.toBeInTheDocument();
-    expect(screen.getByText("Blue Plate")).toBeInTheDocument();
+    expect(await screen.findByText("Tidak ada yang cocok")).toBeVisible();
+  });
+
+  it("berpindah halaman, lalu pencarian baru kembali ke halaman pertama", async () => {
+    daftar = Array.from({ length: 51 }, (_, i) =>
+      produk(i + 1, `P-${String(i + 1).padStart(3, "0")}`, `Produk ${i + 1}`),
+    );
+    renderWithQuery(<ProductsView />);
+    const user = userEvent.setup();
+
+    await screen.findByText("Produk 1");
+    expect(screen.getByText(/Halaman 1 dari 2 · 51 produk/)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(await screen.findByText("Produk 51")).toBeVisible();
+    expect(screen.queryByText("Produk 1")).not.toBeInTheDocument();
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("50");
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Cari"), "produk");
+    await waitFor(() =>
+      expect(permintaanDaftar.at(-1)!.get("q")).toBe("produk"),
+    );
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("0");
   });
 
   it("tidak menawarkan tombol hapus", async () => {

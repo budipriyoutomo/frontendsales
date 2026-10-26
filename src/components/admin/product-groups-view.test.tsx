@@ -64,6 +64,35 @@ describe("ProductGroupsView — daftar (10.5, 10.8)", () => {
     expect(within(nonaktif).getByText("Nonaktif")).toBeInTheDocument();
   });
 
+  it("dipaginasi di klien; saran tetap memakai seluruh daftar", async () => {
+    const banyak = Array.from({ length: 51 }, (_, i) =>
+      mapping(i + 1, `GROUP ${String(i + 1).padStart(2, "0")}`),
+    );
+    server.use(
+      http.get("/api/product-groups", () =>
+        HttpResponse.json({ success: true, data: banyak }),
+      ),
+      http.get("/api/sales/product-groups", () =>
+        HttpResponse.json({ success: true, data: ["GROUP 51", "MINUMAN"] }),
+      ),
+    );
+    renderWithQuery(<ProductGroupsView />);
+    const user = userEvent.setup();
+
+    await screen.findByText("GROUP 01");
+    expect(screen.queryByText("GROUP 51")).not.toBeInTheDocument();
+    expect(screen.getByText(/Halaman 1 dari 2 · 51 group/)).toBeVisible();
+    // GROUP 51 sudah terdaftar walau tidak tampil di halaman ini.
+    const saran = screen.getByRole("group", { name: /saran/i });
+    expect(within(saran).queryByText("GROUP 51")).not.toBeInTheDocument();
+    expect(within(saran).getByText("MINUMAN")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("GROUP 51")).toBeVisible();
+    expect(screen.queryByText("GROUP 01")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+  });
+
   it("tidak menawarkan tombol hapus, dan menjelaskan alasannya", async () => {
     renderWithQuery(<ProductGroupsView />);
     await screen.findByText("COLORPLATE");

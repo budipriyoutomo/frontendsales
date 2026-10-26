@@ -285,6 +285,7 @@ describe("Aksesibilitas dasar (8.7)", () => {
               last_seen_at: "2026-09-12T08:00:00",
             },
           ],
+          pagination: { limit: 50, offset: 0, total: 1, has_more: false },
         }),
       ),
     );

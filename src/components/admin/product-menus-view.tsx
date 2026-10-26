@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, CircleOff } from "lucide-react";
 import { toast } from "sonner";
 import { MenuColorplateDialog } from "@/components/admin/menu-colorplate-dialog";
@@ -48,6 +53,7 @@ import type {
   ProductMenuMapping,
 } from "@/types/domain";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginasi } from "@/components/layout/paginasi";
 
 /** Radix Select tidak menerima value kosong. */
 const SEMUA_GROUP = "__semua__";
@@ -65,6 +71,9 @@ function namaMenu(m: { product_name?: string | null; product_id: number }) {
 /** Satu-satunya group yang dipublish langsung; menu lain lewat konversi warna. */
 const COLORPLATE = "COLORPLATE";
 
+/** Sama dengan default backend; maksimumnya 200. */
+const LIMIT_MENU = 50;
+
 /**
  * Mapping per menu: menu dipilih satu per satu dari group mana pun, lalu
  * dikonversi ke warna colorplate (qty × pengali) saat publish. Menu tanpa
@@ -78,6 +87,7 @@ export function ProductMenusView() {
   const [cariTerkirim, setCariTerkirim] = useState("");
   const [konfirmasi, setKonfirmasi] = useState<Konfirmasi | null>(null);
   const [aturWarnaId, setAturWarnaId] = useState<number | null>(null);
+  const [offset, setOffset] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setCariTerkirim(cari.trim()), JEDA_CARI_MS);
@@ -85,9 +95,22 @@ export function ProductMenusView() {
   }, [cari]);
 
   const daftar = useQuery({
-    queryKey: ["product-menus"],
+    queryKey: ["product-menus", "list", offset],
+    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
-      api.request<ProductMenuMapping[]>("/api/product-menus", { signal }),
+      api.requestWithMeta<ProductMenuMapping[]>("/api/product-menus", {
+        signal,
+        query: { limit: LIMIT_MENU, offset },
+      }),
+  });
+  // Lewat detail: menu yang baru ditambahkan belum tentu ada di halaman ini.
+  const detailWarna = useQuery({
+    queryKey: ["product-menus", "detail", aturWarnaId],
+    enabled: aturWarnaId !== null,
+    queryFn: ({ signal }) =>
+      api.request<ProductMenuMapping>(`/api/product-menus/${aturWarnaId}`, {
+        signal,
+      }),
   });
   // Cache yang sama dengan ProductGroupsView — tidak menambah request.
   const groupTerdaftar = useQuery({
@@ -118,7 +141,12 @@ export function ProductMenusView() {
       }),
   });
 
-  const segarkan = () => qc.invalidateQueries({ queryKey: ["product-menus"] });
+  const segarkan = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["product-menus"] }),
+      // Penanda "Terdaftar" di kandidat datang dari server (`mapping_id`).
+      qc.invalidateQueries({ queryKey: ["product-menu-candidates"] }),
+    ]);
 
   const tambah = useMutation({
     mutationFn: (c: ProductMenuCandidate) =>
@@ -166,13 +194,13 @@ export function ProductMenusView() {
       ),
   });
 
-  const semua = daftar.data ?? [];
-  const idTerdaftar = new Set(semua.map((m) => m.product_id));
+  const semua = daftar.data?.data ?? [];
   // Hanya COLORPLATE yang dipublish langsung — group lain yang aktif tidak.
   const colorplateAktif = (groupTerdaftar.data ?? []).some(
     (g) => g.is_active && normalisasiGroup(g.product_group) === COLORPLATE,
   );
-  const aturWarna = semua.find((m) => m.id === aturWarnaId) ?? null;
+  const aturWarna =
+    detailWarna.data ?? semua.find((m) => m.id === aturWarnaId) ?? null;
   const pilihanGroup = [
     ...new Set((diData.data ?? []).map(normalisasiGroup).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b));
@@ -276,7 +304,7 @@ export function ProductMenusView() {
                 </TableHeader>
                 <TableBody>
                   {kandidat.data.map((c) => {
-                    const terdaftar = idTerdaftar.has(c.product_id);
+                    const terdaftar = c.mapping_id != null;
                     const lewatGroup =
                       colorplateAktif && c.product_group === COLORPLATE;
                     return (
@@ -345,74 +373,90 @@ export function ProductMenusView() {
               keterangan="Hanya COLORPLATE yang dipublish sampai menu pertama ditambahkan di atas dan diberi warna."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Menu terdaftar</TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>ProductID</TableHead>
-                    <TableHead>Warna</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {semua.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">
-                        {namaMenu(m)}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {m.product_group ?? "—"}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {m.product_id}
-                      </TableCell>
-                      <TableCell>
-                        <WarnaMenu menu={m} />
-                      </TableCell>
-                      <TableCell>
-                        {m.is_active ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <CheckCircle2
-                              aria-hidden
-                              className="size-4 text-emerald-600 dark:text-emerald-500"
-                            />
-                            Aktif
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                            <CircleOff aria-hidden className="size-4" />
-                            Nonaktif
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="space-x-2 text-right whitespace-nowrap">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setAturWarnaId(m.id)}
-                        >
-                          Atur warna
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setKonfirmasi({
-                              mapping: m,
-                              aktifkan: !m.is_active,
-                            })
-                          }
-                        >
-                          {m.is_active ? "Nonaktifkan" : "Aktifkan"}
-                        </Button>
-                      </TableCell>
+            <div>
+              <div
+                className={
+                  daftar.isFetching
+                    ? "overflow-x-auto opacity-60 transition-opacity"
+                    : "overflow-x-auto"
+                }
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Menu terdaftar</TableHead>
+                      <TableHead>Group</TableHead>
+                      <TableHead>ProductID</TableHead>
+                      <TableHead>Warna</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {semua.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">
+                          {namaMenu(m)}
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {m.product_group ?? "—"}
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {m.product_id}
+                        </TableCell>
+                        <TableCell>
+                          <WarnaMenu menu={m} />
+                        </TableCell>
+                        <TableCell>
+                          {m.is_active ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <CheckCircle2
+                                aria-hidden
+                                className="size-4 text-emerald-600 dark:text-emerald-500"
+                              />
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                              <CircleOff aria-hidden className="size-4" />
+                              Nonaktif
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="space-x-2 text-right whitespace-nowrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAturWarnaId(m.id)}
+                          >
+                            Atur warna
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setKonfirmasi({
+                                mapping: m,
+                                aktifkan: !m.is_active,
+                              })
+                            }
+                          >
+                            {m.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Paginasi
+                offset={offset}
+                limit={LIMIT_MENU}
+                pagination={daftar.data?.pagination}
+                satuan="menu"
+                onPindah={setOffset}
+              />
             </div>
           )}
         </CardContent>

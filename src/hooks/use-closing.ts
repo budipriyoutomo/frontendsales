@@ -82,15 +82,25 @@ export function useClosingReport(closingReportId: string | null) {
 
 export type StatusMenu = "all" | "mapped" | "unmapped";
 
-export function useClosingMenus(status: StatusMenu, q: string) {
+export function useClosingMenus(status: StatusMenu, q: string, offset: number) {
   return useQuery({
-    queryKey: ["closing-menus", status, q],
+    queryKey: ["closing-menus", "list", status, q, offset],
     placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
-      api.request<ClosingMenu[]>("/api/closing-menus", {
+      api.requestWithMeta<ClosingMenu[]>("/api/closing-menus", {
         signal,
-        query: { status, q: q || undefined },
+        query: { status, q: q || undefined, limit: LIMIT_LAPORAN, offset },
       }),
+  });
+}
+
+/** Satu menu — dialog mapping tidak bergantung pada halaman daftar yang termuat. */
+export function useClosingMenu(menuId: number | null) {
+  return useQuery({
+    queryKey: ["closing-menus", "detail", menuId],
+    enabled: menuId !== null,
+    queryFn: ({ signal }) =>
+      api.request<ClosingMenu>(`/api/closing-menus/${menuId}`, { signal }),
   });
 }
 
