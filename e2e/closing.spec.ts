@@ -192,6 +192,58 @@ test.describe("Kirim rekap closing ke API (backend Fase 8)", () => {
     await expect(detail.locator("pre").last()).toContainText('"totalSold": 84');
   });
 
+  test("menu yang tidak ada di POS ditandai, rekap outletnya bisa dikirim", async ({
+    page,
+  }) => {
+    await masuk(page, "admin");
+    // OUTLET_002 memuat SU-001 (dipetakan di sini; 409 = sudah) dan CP-001
+    // yang tidak ada di POS.
+    const kode = await page.evaluate(async () => {
+      const res = await fetch("/api/closing-menus/1/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: 200104, multiplier: 1 }),
+      });
+      return res.status;
+    });
+    expect([201, 409]).toContain(kode);
+
+    await page.goto("/closing-menu");
+    await page.getByRole("combobox", { name: /status/i }).click();
+    await page.getByRole("option", { name: "Semua" }).click();
+    await page
+      .getByRole("row")
+      .filter({ hasText: "Piring Kosong" })
+      .getByRole("button", { name: /atur mapping/i })
+      .click();
+    const status = page
+      .getByRole("dialog")
+      .getByRole("region", { name: "Status di POS" });
+    const tandai = status.getByRole("button", {
+      name: "Tandai tidak ada di POS",
+    });
+    // Di run lokal kedua, tanda dari run pertama masih ada.
+    await expect(status.getByRole("button")).toBeVisible();
+    if (await tandai.isVisible()) await tandai.click();
+    await expect(
+      status.getByRole("button", { name: "Lepas tanda" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.goto("/closing");
+    const piring = barisMenu(page, "OUTLET_002", "Piring Kosong");
+    await expect(piring.getByText("Tidak ada di POS")).toBeVisible();
+    // Total Sold = Colorplate 3 + qty POS 0.
+    await expect(piring.getByRole("cell").nth(-4)).toHaveText("3");
+
+    await page.goto("/closing?tab=kirim");
+    const baris = page
+      .getByRole("table", { name: /status kirim/i })
+      .getByRole("row")
+      .filter({ hasText: "OUTLET_002" });
+    await expect(baris.getByRole("button", { name: /^kirim/i })).toBeEnabled();
+  });
+
   test("tab kirim hanya untuk admin", async ({ page }) => {
     await masuk(page, "manager");
     await page.goto("/closing?tab=kirim");

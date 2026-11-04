@@ -931,7 +931,10 @@ export interface paths {
         };
         /**
          * List Closing Menus
-         * @description menuCode yang pernah muncul di closing report. `unmapped` = belum punya mapping aktif.
+         * @description menuCode yang pernah muncul di closing report.
+         *
+         *     `unmapped` = belum punya mapping aktif dan tidak ditandai tidak ada di POS
+         *     (masih memblokir kirim rekap); `not_in_pos` = ditandai tidak ada di POS.
          */
         get: operations["list_closing_menus_api_closing_menus_get"];
         put?: never;
@@ -959,7 +962,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Closing Menu
+         * @description Tandai / lepas tanda "tidak ada di POS". Menu bertanda tidak memblokir kirim rekap closing.
+         */
+        patch: operations["update_closing_menu_api_closing_menus__menu_id__patch"];
         trace?: never;
     };
     "/api/closing-menus/{menu_id}/products": {
@@ -1422,6 +1429,11 @@ export interface components {
             products?: components["schemas"]["ClosingComparisonProduct"][];
             /** Pos Qty */
             pos_qty?: number | null;
+            /**
+             * Not In Pos
+             * @default false
+             */
+            not_in_pos: boolean;
         };
         /** ClosingExportDetail */
         ClosingExportDetail: {
@@ -1670,6 +1682,15 @@ export interface components {
             brand_code?: string | null;
             /** Is Mapped */
             is_mapped: boolean;
+            /**
+             * Not In Pos
+             * @default false
+             */
+            not_in_pos: boolean;
+            /** Not In Pos By */
+            not_in_pos_by?: string | null;
+            /** Not In Pos At */
+            not_in_pos_at?: string | null;
             /** Products */
             products?: components["schemas"]["ClosingMenuProductResponse"][];
             /**
@@ -1990,6 +2011,11 @@ export interface components {
              * @default true
              */
             is_active: boolean;
+            /**
+             * Clear Not In Pos
+             * @default false
+             */
+            clear_not_in_pos: boolean;
         };
         /** CreatePosMappingRequest */
         CreatePosMappingRequest: {
@@ -3117,6 +3143,27 @@ export interface components {
             multiplier?: number | null;
             /** Is Active */
             is_active?: boolean | null;
+            /**
+             * Clear Not In Pos
+             * @default false
+             */
+            clear_not_in_pos: boolean;
+        };
+        /**
+         * UpdateClosingMenuRequest
+         * @description Tandai / lepas tanda "tidak ada di POS".
+         *
+         *     Menu yang masih punya mapping aktif hanya bisa ditandai dengan
+         *     `deactivate_products: true` (mapping dimatikan, tidak dihapus); tanpa itu 409.
+         */
+        UpdateClosingMenuRequest: {
+            /** Not In Pos */
+            not_in_pos: boolean;
+            /**
+             * Deactivate Products
+             * @default false
+             */
+            deactivate_products: boolean;
         };
         /** UpdatePosMappingRequest */
         UpdatePosMappingRequest: {
@@ -4947,7 +4994,7 @@ export interface operations {
     list_closing_menus_api_closing_menus_get: {
         parameters: {
             query?: {
-                status?: "all" | "mapped" | "unmapped";
+                status?: "all" | "mapped" | "unmapped" | "not_in_pos";
                 /** @description Cari menuCode atau nama menu */
                 q?: string | null;
                 limit?: number;
@@ -4989,6 +5036,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_closing_menu_api_closing_menus__menu_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClosingMenuRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

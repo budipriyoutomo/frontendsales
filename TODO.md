@@ -652,6 +652,18 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       (`started_at`); waktu kiriman yang masih berjalan memakai `started_at`.
       Tombol Ulangi untuk `mengirim` yang belum macet dijawab 409 "masih sedang
       berjalan" oleh backend dan tampil sebagai toast.
+- [x] **12.7 Menu tidak ada di POS** (backend 8.11, 2026-11-04) — tipe
+      digenerate ulang (`not_in_pos*`, `PATCH /api/closing-menus/{id}`,
+      `clear_not_in_pos`, `status=not_in_pos`). `/closing-menu`: filter
+      _Tidak ada di POS_, ringkasan bertanda, dan di dialog mapping bagian
+      _Status di POS_ (tandai / lepas tanda). Tanda dan mapping aktif tidak
+      boleh bersamaan: admin memilih lewat `AlertDialog` — menandai menu yang
+      masih dipetakan (mapping dinonaktifkan) atau menambah / mengaktifkan
+      mapping di menu bertanda (tanda dilepas). 409
+      `detail.code = "not_in_pos_conflict"` dari server juga membuka pilihan
+      itu. `/closing`: baris bertanda tampil _Tidak ada di POS_ dan tidak
+      dihitung "belum dipetakan". Test: `closing-menus-view.test.tsx` (+9),
+      `closing-view.test.tsx` (+1); E2E CP-001 di OUTLET_002.
 
 ## Fase 13 — Performa & error saat data besar (2026-10-23)
 

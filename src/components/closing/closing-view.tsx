@@ -120,8 +120,9 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   const query = useClosingComparison(filter, includeDeleted);
 
   const baris = query.data ?? [];
+  // Menu bertanda "tidak ada di POS" memang tidak punya angka POS.
   const belumDipetakan = baris.filter(
-    (b) => b.menu_id && !b.products?.length,
+    (b) => b.menu_id && !b.products?.length && !b.not_in_pos,
   ).length;
   // Produk POS yang terjual tetapi qty-nya tidak ada di baris menu mana pun.
   const hanyaPos = baris.filter((b) => !b.menu_id).length;
@@ -288,7 +289,10 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
                           {formatAngka(b.compensation)}
                         </TableCell>
                         <TableCell className="border-l">
-                          <ProdukPos products={b.products ?? []} />
+                          <ProdukPos
+                            products={b.products ?? []}
+                            tidakAdaDiPos={b.not_in_pos ?? false}
+                          />
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
                           {b.pos_qty == null ? "—" : formatAngka(b.pos_qty)}
@@ -332,9 +336,16 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
  */
 function ProdukPos({
   products,
+  tidakAdaDiPos,
 }: {
   products: NonNullable<ClosingComparisonRow["products"]>;
+  tidakAdaDiPos: boolean;
 }) {
+  if (products.length === 0 && tidakAdaDiPos) {
+    return (
+      <span className="text-muted-foreground text-sm">Tidak ada di POS</span>
+    );
+  }
   if (products.length === 0) {
     return (
       <span className="text-sm text-amber-800 dark:text-amber-400">

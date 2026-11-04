@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ const JEDA_CARI_MS = 300;
 const PILIHAN_STATUS: { value: StatusMenu; label: string }[] = [
   { value: "unmapped", label: "Belum dipetakan" },
   { value: "mapped", label: "Sudah dipetakan" },
+  { value: "not_in_pos", label: "Tidak ada di POS" },
   { value: "all", label: "Semua" },
 ];
 
@@ -59,7 +60,9 @@ export function namaProduk(p: {
  * Mapping menu closing report → ProductID POS (backend TODO Fase 7.6).
  *
  * menuCode muncul sendiri begitu closing pertama yang memuatnya diterima.
- * Tanpa mapping, baris perbandingannya berstatus "belum dipetakan".
+ * Tanpa mapping, baris perbandingannya berstatus "belum dipetakan" dan rekap
+ * outlet + tanggalnya tidak bisa dikirim ke API — kecuali admin menandai
+ * menunya "tidak ada di POS" (terkirim dengan qty POS 0).
  */
 export function ClosingMenusView() {
   const [status, setStatus] = useState<StatusMenu>("unmapped");
@@ -97,6 +100,13 @@ export function ClosingMenusView() {
             <p>
               Pengali = berapa unit produk POS untuk 1 porsi menu. Umumnya 1;
               menu yang disajikan di 2 piring → pengali 2.
+            </p>
+            <p>
+              Menu Colorplate yang memang tidak dijual di POS ditandai{" "}
+              <em>Tidak ada di POS</em> dari tombol Atur mapping. Menu itu tidak
+              lagi memblokir kirim ke API dan terkirim dengan qty POS 0. Tanda
+              dan mapping ProductID tidak bisa aktif bersamaan — admin diminta
+              memilih salah satunya.
             </p>
           </>
         }
@@ -149,12 +159,16 @@ export function ClosingMenusView() {
               judul={
                 status === "unmapped"
                   ? "Semua menu sudah dipetakan"
-                  : "Tidak ada menu"
+                  : status === "not_in_pos"
+                    ? "Tidak ada menu yang ditandai"
+                    : "Tidak ada menu"
               }
               keterangan={
                 status === "unmapped"
                   ? "Menu baru dari closing report berikutnya akan muncul di sini."
-                  : "Belum ada menu closing yang cocok dengan filter ini."
+                  : status === "not_in_pos"
+                    ? "Menu Colorplate yang tidak dijual di POS ditandai dari tombol Atur mapping."
+                    : "Belum ada menu closing yang cocok dengan filter ini."
               }
             />
           ) : (
@@ -229,6 +243,14 @@ export function ClosingMenusView() {
 
 function RingkasanMapping({ menu }: { menu: ClosingMenu }) {
   const aktif = (menu.products ?? []).filter((p) => p.is_active);
+  if (menu.not_in_pos) {
+    return (
+      <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
+        <Ban aria-hidden className="size-4" />
+        Tidak ada di POS
+      </span>
+    );
+  }
   if (aktif.length === 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-500">

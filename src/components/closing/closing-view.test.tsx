@@ -281,6 +281,35 @@ describe("ClosingView — perbandingan POS", () => {
     expect(sel.at(-4)).toHaveTextContent("5");
   });
 
+  it("menu bertanda tidak ada di POS tidak dihitung belum dipetakan", async () => {
+    server.use(
+      http.get("/api/closing-reports/comparison", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            baris("Salmon Nigiri"),
+            baris("Piring Kosong", {
+              sold: 7,
+              products: [],
+              pos_qty: null,
+              not_in_pos: true,
+            }),
+          ],
+        }),
+      ),
+    );
+    renderWithQuery(<ClosingView role="admin" />);
+
+    const piring = (await screen.findByText("Piring Kosong")).closest("tr")!;
+    expect(within(piring).getByText("Tidak ada di POS")).toBeVisible();
+    expect(within(piring).queryByText("Belum dipetakan")).toBeNull();
+    const sel = within(piring).getAllByRole("cell");
+    // Qty POS kosong; Total Sold = Colorplate saja.
+    expect(sel.at(-5)).toHaveTextContent("—");
+    expect(sel.at(-4)).toHaveTextContent("7");
+    expect(screen.queryByText(/menu belum punya angka POS/)).toBeNull();
+  });
+
   it("produk POS tanpa menu di Colorplate tetap tampil untuk konsolidasi", async () => {
     renderWithQuery(<ClosingView role="manager" />);
 

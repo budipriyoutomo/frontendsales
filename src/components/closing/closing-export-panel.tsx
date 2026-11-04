@@ -143,7 +143,8 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
             <p>
               Belum bisa dikirim selama ada menu yang belum dipetakan, atau satu
               ProductID dipetakan ke lebih dari satu menu — qty POS-nya akan
-              terhitung dobel.
+              terhitung dobel. Menu yang ditandai <em>Tidak ada di POS</em> di
+              Mapping Menu Closing tidak memblokir; terkirim dengan qty POS 0.
             </p>
           </CaraKerja>
 
@@ -290,7 +291,10 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
         href="/closing-menu"
         className="text-primary font-medium underline-offset-4 hover:underline"
       >
-        Petakan menu
+        {/* Tanda "tidak ada di POS" hanya menjawab menu yang belum dipetakan. */}
+        {belum.length > 0
+          ? "Petakan menu atau tandai tidak ada di POS"
+          : "Petakan menu"}
       </Link>
     </div>
   );

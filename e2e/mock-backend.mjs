@@ -114,7 +114,10 @@ const state = {
       updated_at: null,
     },
   ],
-  /** Closing report dari RabbitMQ (Fase 11). SU-001 sengaja belum dipetakan. */
+  /**
+   * Closing report dari RabbitMQ (Fase 11). SU-001 sengaja belum dipetakan;
+   * CP-001 menu Colorplate yang tidak dijual di POS (ditandai di test).
+   */
   closingMenus: [
     {
       id: 1,
@@ -143,6 +146,16 @@ const state = {
           updated_at: null,
         },
       ],
+      first_seen_at: "2026-09-12T15:15:00",
+      last_seen_at: "2026-09-12T15:15:00",
+    },
+    {
+      id: 3,
+      menu_code: "CP-001",
+      menu_id: "0a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c53",
+      menu_name: "Piring Kosong",
+      brand_code: "MHR",
+      products: [],
       first_seen_at: "2026-09-12T15:15:00",
       last_seen_at: "2026-09-12T15:15:00",
     },
@@ -176,7 +189,10 @@ const CLOSING = {
     ["SU-001", 42, 3, 0, 0],
     ["SU-002", 12, 0, 0, 0],
   ],
-  OUTLET_002: [["SU-001", 5, 1, 0, 0]],
+  OUTLET_002: [
+    ["SU-001", 5, 1, 0, 0],
+    ["CP-001", 3, 0, 0, 0],
+  ],
 };
 const TANGGAL_CLOSING = "2026-09-12";
 
@@ -204,6 +220,14 @@ function ringkasanClosing(outlet) {
 const menuTampil = (m) => ({
   ...m,
   is_mapped: m.products.some((p) => p.is_active),
+  not_in_pos: m.not_in_pos ?? false,
+  not_in_pos_by: m.not_in_pos_by ?? null,
+  not_in_pos_at: m.not_in_pos_at ?? null,
+});
+
+/** 409 bentrok tanda "tidak ada di POS" vs mapping aktif (sama dengan backend). */
+const BENTROK_TIDAK_ADA_DI_POS = (message) => ({
+  detail: { code: "not_in_pos_conflict", message },
 });
 
 /** Log pesan RabbitMQ (`/api/closing-messages`): satu diterima, satu ditolak. */
@@ -289,6 +313,7 @@ function perbandingan(outlet) {
         pos_qty: products.length
           ? products.reduce((n, p) => n + (QTY_POS[o][p.product_id] ?? 0), 0)
           : null,
+        not_in_pos: menu.not_in_pos ?? false,
       });
     }
     // Produk POS yang qty-nya belum tampil di baris menu mana pun.
@@ -374,7 +399,7 @@ function rekapKirim(outlet) {
     items,
     hash: JSON.stringify(items),
     menu_belum_dipetakan: menuBaris
-      .filter((b) => b.products.length === 0)
+      .filter((b) => b.products.length === 0 && !b.not_in_pos)
       .map((b) => ({
         menu_id: b.menu_id,
         menu_code: b.menu_code,
@@ -1004,7 +1029,8 @@ const server = createServer(async (req, res) => {
     const data = state.closingMenus
       .map(menuTampil)
       .filter((m) => status !== "mapped" || m.is_mapped)
-      .filter((m) => status !== "unmapped" || !m.is_mapped)
+      .filter((m) => status !== "unmapped" || (!m.is_mapped && !m.not_in_pos))
+      .filter((m) => status !== "not_in_pos" || m.not_in_pos)
       .filter(
         (m) =>
           !q ||
@@ -1031,6 +1057,34 @@ const server = createServer(async (req, res) => {
     if (!menu) return tolak(res, 404, "Menu closing tidak ditemukan");
     return json(res, 200, bungkus(menuTampil(menu)));
   }
+  if (detailMenu && method === "PATCH") {
+    const menu = state.closingMenus.find((m) => m.id === Number(detailMenu[1]));
+    if (!menu) return tolak(res, 404, "Menu closing tidak ditemukan");
+    const body = await bacaBody(req);
+    if (body.not_in_pos) {
+      const aktif = menu.products.filter((p) => p.is_active);
+      if (aktif.length && !body.deactivate_products) {
+        return json(
+          res,
+          409,
+          BENTROK_TIDAK_ADA_DI_POS(
+            "Menu ini masih punya mapping ProductID aktif.",
+          ),
+        );
+      }
+      for (const p of aktif) p.is_active = false;
+      if (!menu.not_in_pos) {
+        menu.not_in_pos = true;
+        menu.not_in_pos_by = user.email;
+        menu.not_in_pos_at = new Date().toISOString().slice(0, 19);
+      }
+    } else {
+      menu.not_in_pos = false;
+      menu.not_in_pos_by = null;
+      menu.not_in_pos_at = null;
+    }
+    return json(res, 200, bungkus(menuTampil(menu)));
+  }
 
   const tambahProduk = /^\/api\/closing-menus\/(\d+)\/products$/.exec(path);
   if (tambahProduk && method === "POST") {
@@ -1053,6 +1107,18 @@ const server = createServer(async (req, res) => {
         409,
         "ProductID sudah dipetakan ke menu ini. Ubah lewat PATCH.",
       );
+    }
+    if (menu.not_in_pos && body.is_active !== false) {
+      if (!body.clear_not_in_pos) {
+        return json(
+          res,
+          409,
+          BENTROK_TIDAK_ADA_DI_POS("Menu ini ditandai tidak ada di POS."),
+        );
+      }
+      menu.not_in_pos = false;
+      menu.not_in_pos_by = null;
+      menu.not_in_pos_at = null;
     }
     const baru = {
       id:
@@ -1079,6 +1145,18 @@ const server = createServer(async (req, res) => {
     const produk = menu?.products.find((p) => p.id === Number(ubahProduk[2]));
     if (!produk) return tolak(res, 404, "Mapping tidak ditemukan");
     const body = await bacaBody(req);
+    if (body.is_active && !produk.is_active && menu.not_in_pos) {
+      if (!body.clear_not_in_pos) {
+        return json(
+          res,
+          409,
+          BENTROK_TIDAK_ADA_DI_POS("Menu ini ditandai tidak ada di POS."),
+        );
+      }
+      menu.not_in_pos = false;
+      menu.not_in_pos_by = null;
+      menu.not_in_pos_at = null;
+    }
     if (body.multiplier !== undefined) produk.multiplier = body.multiplier;
     if (body.is_active !== undefined) produk.is_active = body.is_active;
     produk.updated_at = new Date().toISOString().slice(0, 19);

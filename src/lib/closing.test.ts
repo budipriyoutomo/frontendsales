@@ -20,6 +20,7 @@ function baris(lain: Partial<ClosingComparisonRow>): ClosingComparisonRow {
     compensation: null,
     products: [],
     pos_qty: null,
+    not_in_pos: false,
     ...lain,
   };
 }

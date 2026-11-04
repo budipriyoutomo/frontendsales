@@ -80,7 +80,8 @@ export function useClosingReport(closingReportId: string | null) {
   });
 }
 
-export type StatusMenu = "all" | "mapped" | "unmapped";
+/** `unmapped` = masih perlu tindakan admin; menu bertanda `not_in_pos` tidak ikut. */
+export type StatusMenu = "all" | "mapped" | "unmapped" | "not_in_pos";
 
 export function useClosingMenus(status: StatusMenu, q: string, offset: number) {
   return useQuery({
