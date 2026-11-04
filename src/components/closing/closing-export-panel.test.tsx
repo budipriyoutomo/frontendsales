@@ -52,6 +52,10 @@ function pasangan(tanggal: string, lain = {}) {
     total_sold: 340,
     menu_belum_dipetakan: [],
     produk_dobel: [],
+    has_closing: true,
+    produk_colorplate_dipetakan: [],
+    produk_belum_master: [],
+    colorplate_tanpa_closing: [],
     last_attempt: null,
     last_sent: null,
     ...lain,
@@ -223,6 +227,55 @@ describe("ClosingExportPanel", () => {
     ).toHaveAttribute("href", "/closing-menu");
     expect(
       within(baris).getByRole("button", { name: /^kirim/i }),
+    ).toBeDisabled();
+  });
+
+  it("alasan blokir colorplate dan master produk punya tautan perbaikan", async () => {
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            pasangan("2026-10-04", {
+              can_send: false,
+              produk_colorplate_dipetakan: [
+                { product_id: 500, product_name: "RED", menus: ["SU-001"] },
+              ],
+              produk_belum_master: [{ product_id: 300, product_name: "Ocha" }],
+            }),
+            pasangan("2026-10-03", {
+              can_send: false,
+              has_closing: false,
+              colorplate_tanpa_closing: [
+                { product_id: 501, product_name: "BLUE" },
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+    await tampil();
+
+    const baris = barisTanggal(/4 Okt/);
+    expect(
+      within(baris).getByText(/produk colorplate 500 \(RED\)/i),
+    ).toBeInTheDocument();
+    expect(
+      within(baris).getByRole("link", { name: /perbaiki mapping menu/i }),
+    ).toHaveAttribute("href", "/closing-menu");
+    expect(within(baris).getByText(/300 \(Ocha\)/)).toBeInTheDocument();
+    expect(
+      within(baris).getByRole("link", { name: /lengkapi master produk/i }),
+    ).toHaveAttribute("href", "/produk");
+    expect(within(baris).queryByText("Tanpa closing")).not.toBeInTheDocument();
+
+    const tanpaClosing = barisTanggal(/3 Okt/);
+    expect(within(tanpaClosing).getByText("Tanpa closing")).toBeInTheDocument();
+    expect(
+      within(tanpaClosing).getByText(/colorplate terjual tanpa closing/i),
+    ).toBeInTheDocument();
+    expect(
+      within(tanpaClosing).getByRole("button", { name: /^kirim/i }),
     ).toBeDisabled();
   });
 

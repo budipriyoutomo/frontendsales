@@ -131,9 +131,15 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
           <CaraKerja label="Cara kerja kirim">
             <p>
               Satu kiriman berisi rekap satu outlet pada satu tanggal produksi:
-              setiap menu Colorplate dan produk POS yang tidak ada di
-              Colorplate, dengan Total Sold = Colorplate terjual + qty POS.
-              Transaksi void tidak dihitung.
+              setiap menu Colorplate, ditambah produk POS lain (minuman, side
+              dish, dll.) dengan identitas dari Master Produk. Total Sold =
+              Colorplate terjual + qty POS. Transaksi void tidak dihitung.
+            </p>
+            <p>
+              Penjualan colorplate di POS (group COLORPLATE atau produk yang
+              punya konversi warna) <strong>tidak</strong> dihitung lagi —
+              angkanya sudah ada di Colorplate terjual. Karena itu Total Sold di
+              sini bisa lebih kecil daripada di tab perbandingan.
             </p>
             <p>
               Kiriman baru menggantikan isi kiriman sebelumnya di API tujuan.
@@ -141,10 +147,17 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
               terkirim, statusnya menjadi <em>Perlu kirim ulang</em>.
             </p>
             <p>
-              Belum bisa dikirim selama ada menu yang belum dipetakan, atau satu
-              ProductID dipetakan ke lebih dari satu menu — qty POS-nya akan
-              terhitung dobel. Menu yang ditandai <em>Tidak ada di POS</em> di
-              Mapping Menu Closing tidak memblokir; terkirim dengan qty POS 0.
+              Belum bisa dikirim selama ada menu yang belum dipetakan, satu
+              ProductID dipetakan ke lebih dari satu menu, atau produk
+              colorplate dipetakan ke menu — qty POS-nya akan terhitung dobel.
+              Menu yang ditandai <em>Tidak ada di POS</em> di Mapping Menu
+              Closing tidak memblokir; terkirim dengan qty POS 0.
+            </p>
+            <p>
+              Produk POS lain wajib punya Master Produk aktif dengan kode
+              produk. Outlet yang brand-nya tidak wajib closing report bisa
+              dikirim tanpa closing (penanda <em>Tanpa closing</em>), kecuali
+              ada colorplate terjual.
             </p>
           </CaraKerja>
 
@@ -154,8 +167,8 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
             <KeadaanGagal error={status.error} onCobaLagi={status.refetch} />
           ) : baris.length === 0 ? (
             <KeadaanKosong
-              judul="Belum ada closing report"
-              keterangan="Tidak ada closing pada rentang tanggal produksi ini."
+              judul="Belum ada data untuk dikirim"
+              keterangan="Tidak ada closing — atau penjualan untuk brand yang tidak wajib closing — pada rentang tanggal produksi ini."
             />
           ) : (
             <div>
@@ -183,8 +196,13 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
                         <TableCell className="whitespace-nowrap">
                           {formatTanggal(p.production_date)}
                         </TableCell>
-                        <TableCell className="font-mono">
-                          {p.outlet_code}
+                        <TableCell>
+                          <span className="font-mono">{p.outlet_code}</span>
+                          {p.has_closing ? null : (
+                            <span className="text-muted-foreground mt-0.5 block text-xs">
+                              Tanpa closing
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatAngka(p.item_count)}
@@ -268,9 +286,30 @@ export function ClosingExportPanel({ filter }: { filter: Filter }) {
   );
 }
 
+type ProdukPos = { product_id: number; product_name?: string | null };
+
+function daftarProduk(daftar: ProdukPos[]) {
+  return daftar
+    .map((p) =>
+      p.product_name ? `${p.product_id} (${p.product_name})` : p.product_id,
+    )
+    .join(", ");
+}
+
+const TAUTAN =
+  "text-primary block font-medium underline-offset-4 hover:underline";
+
 function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
-  const { menu_belum_dipetakan: belum, produk_dobel: dobel } = pasangan;
-  if (belum.length === 0 && dobel.length === 0) return null;
+  const {
+    menu_belum_dipetakan: belum,
+    produk_dobel: dobel,
+    produk_colorplate_dipetakan: colorplate,
+    produk_belum_master: tanpaMaster,
+    colorplate_tanpa_closing: tanpaClosing,
+  } = pasangan;
+  const soalMenu = belum.length + dobel.length + colorplate.length > 0;
+  if (!soalMenu && tanpaMaster.length === 0 && tanpaClosing.length === 0)
+    return null;
 
   return (
     <div className="space-y-1 text-xs text-amber-800 dark:text-amber-400">
@@ -281,21 +320,44 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
         </p>
       ) : null}
       {dobel.map((d) => (
-        <p key={d.product_id}>
+        <p key={`dobel-${d.product_id}`}>
           ProductID {d.product_id}
           {d.product_name ? ` (${d.product_name})` : ""} dipetakan ke{" "}
           {d.menus.length} menu: {d.menus.join(", ")}
         </p>
       ))}
-      <Link
-        href="/closing-menu"
-        className="text-primary font-medium underline-offset-4 hover:underline"
-      >
-        {/* Tanda "tidak ada di POS" hanya menjawab menu yang belum dipetakan. */}
-        {belum.length > 0
-          ? "Petakan menu atau tandai tidak ada di POS"
-          : "Petakan menu"}
-      </Link>
+      {colorplate.map((d) => (
+        <p key={`cp-${d.product_id}`}>
+          Produk colorplate {d.product_id}
+          {d.product_name ? ` (${d.product_name})` : ""} dipetakan ke menu{" "}
+          {d.menus.join(", ")} — lepas mapping-nya, qty sudah ada di Colorplate
+        </p>
+      ))}
+      {soalMenu ? (
+        <Link href="/closing-menu" className={TAUTAN}>
+          {/* Tanda "tidak ada di POS" hanya menjawab menu yang belum dipetakan. */}
+          {belum.length > 0
+            ? "Petakan menu atau tandai tidak ada di POS"
+            : "Perbaiki mapping menu"}
+        </Link>
+      ) : null}
+      {tanpaMaster.length > 0 ? (
+        <>
+          <p>
+            {formatAngka(tanpaMaster.length)} produk POS belum punya master
+            produk: {daftarProduk(tanpaMaster)}
+          </p>
+          <Link href="/produk" className={TAUTAN}>
+            Lengkapi master produk
+          </Link>
+        </>
+      ) : null}
+      {tanpaClosing.length > 0 ? (
+        <p>
+          Colorplate terjual tanpa closing report: {daftarProduk(tanpaClosing)}{" "}
+          — tunggu closing outlet ini masuk
+        </p>
+      ) : null}
     </div>
   );
 }

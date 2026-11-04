@@ -664,6 +664,19 @@ Tidak ada route BFF baru — catch-all `/api/[...path]` sudah meneruskannya.
       itu. `/closing`: baris bertanda tampil _Tidak ada di POS_ dan tidak
       dihitung "belum dipetakan". Test: `closing-menus-view.test.tsx` (+9),
       `closing-view.test.tsx` (+1); E2E CP-001 di OUTLET_002.
+- [x] **12.8 Colorplate tidak dobel + syarat closing per brand** (backend
+      8.12, 2026-11-04) — tipe digenerate ulang dari OpenAPI backend
+      (`requires_closing`, `has_closing`, `produk_colorplate_dipetakan`,
+      `produk_belum_master`, `colorplate_tanpa_closing`). `/brand`: kolom
+      _Closing report_ (Wajib / Tidak wajib) dan switch _Wajib closing report_
+      di dialog ubah, dikirim lewat PATCH. Tab _Kirim ke API_: tiga alasan
+      blokir baru (tautan ke `/closing-menu` dan `/produk`), penanda _Tanpa
+      closing_, teks _Cara kerja kirim_ menjelaskan colorplate tidak dihitung
+      lagi dan produk lain wajib punya master, keadaan kosong jadi _Belum ada
+      data untuk dikirim_. Tab perbandingan: catatan bahwa Total Sold di sana
+      bisa lebih besar daripada di tab kirim. Mock E2E: `productId` string,
+      `productCode`, field blokir baru. Test: `brands-view.test.tsx` (+2),
+      `closing-export-panel.test.tsx` (+1); 404 unit + E2E closing lulus.
 
 ## Fase 13 — Performa & error saat data besar (2026-10-23)
 
@@ -677,7 +690,7 @@ Pasangan backend Fase 9.
 - [x] **13.3** Dropdown group dashboard mengirim rentang tanggal filter.
 - [x] **13.4** 503/504 tidak diulang otomatis (`src/lib/api/retry.ts`).
 - [x] **13.5** Peringatan di filter kalau rentang > 366 hari (`MAKS_HARI_RENTANG`).
-- [ ] **13.6** `npm run gen:api` ulang setelah backend jalan (param baru di
+- [x] **13.6** (2026-11-04, ikut 12.8: tipe digenerate dari OpenAPI backend terbaru) `npm run gen:api` ulang setelah backend jalan (param baru di
       `/api/sales/product-groups`).
 
 ---

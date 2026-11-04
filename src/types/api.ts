@@ -774,7 +774,7 @@ export interface paths {
         head?: never;
         /**
          * Update Brand
-         * @description Ubah nama / aktifkan / nonaktifkan brand. Mapping outlet-nya tidak ikut berubah.
+         * @description Ubah nama / aktifkan / nonaktifkan brand / syarat closing. Mapping outlet-nya tidak ikut berubah.
          */
         patch: operations["update_brand_api_brands__brand_id__patch"];
         trace?: never;
@@ -1115,7 +1115,10 @@ export interface paths {
         };
         /**
          * Closing Export Status
-         * @description Status kirim setiap outlet × tanggal produksi yang punya closing, terbaru dulu.
+         * @description Status kirim setiap outlet × tanggal produksi, terbaru dulu.
+         *
+         *     Memuat tanggal yang punya closing, ditambah — kalau rentang tanggal diisi —
+         *     tanggal yang punya penjualan untuk outlet brand tanpa syarat closing.
          */
         get: operations["closing_export_status_api_closing_exports_status_get"];
         put?: never;
@@ -1355,6 +1358,11 @@ export interface components {
             name: string;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Requires Closing
+             * @default true
+             */
+            requires_closing: boolean;
             /** Outlet Codes */
             outlet_codes?: string[];
             /** Created At */
@@ -1518,12 +1526,23 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
         };
         /**
+         * ClosingExportPosProduct
+         * @description ProductID POS yang memblokir kiriman (belum punya master, atau colorplate tanpa closing).
+         */
+        ClosingExportPosProduct: {
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name?: string | null;
+        };
+        /**
          * ClosingExportStatus
          * @description Status kirim satu outlet × tanggal produksi.
          *
          *     `status` dibanding kiriman terakhir yang sampai: belum_dikirim / terkirim /
          *     perlu_kirim_ulang (rekap berubah sejak terkirim). `can_send` false kalau
-         *     diblokir atau kiriman terakhir masih `mengirim`.
+         *     diblokir atau kiriman terakhir masih `mengirim`. `has_closing` false =
+         *     brand tanpa syarat closing, rekap hanya dari penjualan POS.
          */
         ClosingExportStatus: {
             /** Outlet Code */
@@ -1544,10 +1563,18 @@ export interface components {
             item_count: number;
             /** Total Sold */
             total_sold: number;
+            /** Has Closing */
+            has_closing: boolean;
             /** Menu Belum Dipetakan */
             menu_belum_dipetakan: components["schemas"]["ClosingExportUnmappedMenu"][];
             /** Produk Dobel */
             produk_dobel: components["schemas"]["ClosingExportDuplicateProduct"][];
+            /** Produk Colorplate Dipetakan */
+            produk_colorplate_dipetakan: components["schemas"]["ClosingExportDuplicateProduct"][];
+            /** Produk Belum Master */
+            produk_belum_master: components["schemas"]["ClosingExportPosProduct"][];
+            /** Colorplate Tanpa Closing */
+            colorplate_tanpa_closing: components["schemas"]["ClosingExportPosProduct"][];
             last_attempt?: components["schemas"]["ClosingExportSummary"] | null;
             last_sent?: components["schemas"]["ClosingExportSummary"] | null;
         };
@@ -1993,6 +2020,11 @@ export interface components {
              * @default true
              */
             is_active: boolean;
+            /**
+             * Requires Closing
+             * @default true
+             */
+            requires_closing: boolean;
         };
         /**
          * CreateClosingMenuProductRequest
@@ -3133,6 +3165,8 @@ export interface components {
             name?: string | null;
             /** Is Active */
             is_active?: boolean | null;
+            /** Requires Closing */
+            requires_closing?: boolean | null;
         };
         /**
          * UpdateClosingMenuProductRequest

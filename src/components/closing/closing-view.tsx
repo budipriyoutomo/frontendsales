@@ -149,6 +149,12 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
               Total Sold = Colorplate terjual + qty POS; angka yang kosong
               dihitung 0.
             </p>
+            <p>
+              Tabel ini menampilkan data POS apa adanya, termasuk produk
+              colorplate sebagai baris <em>hanya POS</em>. Rekap yang dikirim ke
+              API tidak menghitung produk colorplate itu lagi, jadi Total Sold
+              di tab Kirim ke API bisa lebih kecil — itu bukan kesalahan.
+            </p>
           </CaraKerja>
 
           <div className="flex items-center gap-2">

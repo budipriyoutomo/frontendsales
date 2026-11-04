@@ -26,6 +26,7 @@ function brand(
     code,
     name,
     is_active: true,
+    requires_closing: true,
     outlet_codes: [],
     created_at: "2026-09-01T08:00:00",
     updated_at: null,
@@ -188,8 +189,67 @@ describe("BrandsView — ubah brand", () => {
     await user.click(within(dialog).getByRole("button", { name: "Simpan" }));
 
     await waitFor(() =>
-      expect(body).toEqual({ name: "Maharasa Group", is_active: false }),
+      expect(body).toEqual({
+        name: "Maharasa Group",
+        is_active: false,
+        requires_closing: true,
+      }),
     );
+  });
+
+  it("mematikan wajib closing report lewat PATCH", async () => {
+    let body: unknown = null;
+    server.use(
+      http.patch("/api/brands/1", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({
+          success: true,
+          data: brand(1, "MHR", "Maharasa", { requires_closing: false }),
+        });
+      }),
+    );
+
+    renderWithQuery(<BrandsView />);
+    const user = userEvent.setup();
+
+    const mhr = (await screen.findByText("Maharasa")).closest("tr")!;
+    expect(within(mhr).getByText("Wajib")).toBeInTheDocument();
+    await user.click(within(mhr).getByRole("button", { name: "Ubah" }));
+
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("switch", { name: "Wajib closing report" }),
+    );
+    expect(
+      within(dialog).getByText(/boleh dikirim tanpa closing/),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() =>
+      expect(body).toEqual({
+        name: "Maharasa",
+        is_active: true,
+        requires_closing: false,
+      }),
+    );
+  });
+
+  it("menampilkan brand yang tidak wajib closing", async () => {
+    server.use(
+      http.get("/api/brands", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            brand(3, "NOC", "Tanpa Colorplate", { requires_closing: false }),
+          ],
+        }),
+      ),
+    );
+
+    renderWithQuery(<BrandsView />);
+
+    const baris = (await screen.findByText("Tanpa Colorplate")).closest("tr")!;
+    expect(within(baris).getByText("Tidak wajib")).toBeInTheDocument();
   });
 });
 

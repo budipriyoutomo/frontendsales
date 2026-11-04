@@ -365,6 +365,11 @@ function perbandingan(outlet) {
 /**
  * Meniru `closing_export_service`: isi kiriman per outlet (satu tanggal
  * closing di data tiruan), blokir menu belum dipetakan / produk dobel.
+ *
+ * Data tiruan tidak punya produk colorplate di POS, dan setiap produk POS lain
+ * dianggap sudah punya master (kode = ProductID, product_code = `PRD-…`), jadi
+ * tiga blokir baru (colorplate dipetakan, belum master, colorplate tanpa
+ * closing) selalu kosong di sini.
  */
 function rekapKirim(outlet) {
   const baris = perbandingan(outlet);
@@ -375,7 +380,8 @@ function rekapKirim(outlet) {
       menuId: b.menu_id,
       menuCode: b.menu_code,
       menuName: b.menu_name,
-      productId: b.menu_id ? null : b.products[0].product_id,
+      productId: b.menu_id ? null : String(b.products[0].product_id),
+      productCode: b.menu_id ? null : `PRD-${b.products[0].product_id}`,
       productName: b.menu_id ? null : b.products[0].product_name,
       colorplateSold: b.sold ?? 0,
       posQty: pos,
@@ -1241,8 +1247,12 @@ const server = createServer(async (req, res) => {
             rekap.produk_dobel.length === 0,
           item_count: rekap.items.length,
           total_sold: rekap.items.reduce((n, i) => n + i.totalSold, 0),
+          has_closing: true,
           menu_belum_dipetakan: rekap.menu_belum_dipetakan,
           produk_dobel: rekap.produk_dobel,
+          produk_colorplate_dipetakan: [],
+          produk_belum_master: [],
+          colorplate_tanpa_closing: [],
           last_attempt: terakhir && ringkasKiriman(terakhir),
           last_sent: sampai && ringkasKiriman(sampai),
         };
@@ -1269,9 +1279,12 @@ const server = createServer(async (req, res) => {
     if (rekap.menu_belum_dipetakan.length || rekap.produk_dobel.length) {
       return tolak(res, 422, {
         message:
-          "Rekap belum bisa dikirim: petakan semua menu dan pastikan satu ProductID hanya dipetakan ke satu menu.",
+          "Rekap belum bisa dikirim. Lihat daftar di bawah: mapping menu closing, mapping produk colorplate, atau master produk yang belum lengkap.",
         menu_belum_dipetakan: rekap.menu_belum_dipetakan,
         produk_dobel: rekap.produk_dobel,
+        produk_colorplate_dipetakan: [],
+        produk_belum_master: [],
+        colorplate_tanpa_closing: [],
       });
     }
     const id = state.closingExports.length + 1;

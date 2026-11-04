@@ -53,7 +53,12 @@ import { usePaginasiKlien } from "@/hooks/use-paginasi-klien";
 const TANPA_BRAND = "__tanpa__";
 
 type Galat = { code?: string | null; name?: string | null };
-type UbahBrand = { brand: Brand; name: string; is_active: boolean };
+type UbahBrand = {
+  brand: Brand;
+  name: string;
+  is_active: boolean;
+  requires_closing: boolean;
+};
 
 function Status({ aktif }: { aktif: boolean }) {
   // Ikon + teks, tidak pernah warna saja (8.7).
@@ -131,10 +136,10 @@ export function BrandsView() {
   });
 
   const simpanUbah = useMutation({
-    mutationFn: ({ brand, name, is_active }: UbahBrand) =>
+    mutationFn: ({ brand, name, is_active, requires_closing }: UbahBrand) =>
       api.request<Brand>(`/api/brands/${brand.id}`, {
         method: "PATCH",
-        body: { name, is_active },
+        body: { name, is_active, requires_closing },
       }),
     onSuccess: (hasil) => {
       setUbah(null);
@@ -204,6 +209,11 @@ export function BrandsView() {
                 Brand tidak bisa dihapus dan kodenya tidak bisa diganti — kode
                 dipakai di tautan laporan yang sudah dibagikan. Brand yang tidak
                 dipakai lagi cukup dinonaktifkan.
+              </p>
+              <p>
+                <strong>Wajib closing report</strong> menentukan apakah rekap
+                outlet brand ini boleh dikirim ke API eksternal tanpa closing.
+                Matikan hanya untuk brand yang tidak memakai colorplate.
               </p>
             </>
           }
@@ -315,6 +325,7 @@ export function BrandsView() {
                         <TableHead>Nama</TableHead>
                         <TableHead>Outlet</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Closing report</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -337,6 +348,15 @@ export function BrandsView() {
                           <TableCell>
                             <Status aktif={b.is_active} />
                           </TableCell>
+                          <TableCell>
+                            {b.requires_closing ? (
+                              "Wajib"
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Tidak wajib
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -346,6 +366,7 @@ export function BrandsView() {
                                   brand: b,
                                   name: b.name,
                                   is_active: b.is_active,
+                                  requires_closing: b.requires_closing,
                                 })
                               }
                             >
@@ -548,6 +569,29 @@ export function BrandsView() {
                 }
               />
               <Label htmlFor="ubah_brand_aktif">Aktif</Label>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="ubah_brand_wajib_closing"
+                  checked={ubah?.requires_closing ?? true}
+                  onCheckedChange={(wajib) =>
+                    ubah && setUbah({ ...ubah, requires_closing: wajib })
+                  }
+                  aria-describedby="ubah_brand_wajib_closing-ket"
+                />
+                <Label htmlFor="ubah_brand_wajib_closing">
+                  Wajib closing report
+                </Label>
+              </div>
+              <p
+                id="ubah_brand_wajib_closing-ket"
+                className="text-muted-foreground text-xs"
+              >
+                {(ubah?.requires_closing ?? true)
+                  ? "Rekap outlet brand ini baru bisa dikirim ke API setelah closing masuk."
+                  : "Rekap boleh dikirim tanpa closing, hanya dari penjualan POS. Kalau ada colorplate terjual tanpa closing, kiriman tetap ditahan."}
+              </p>
             </div>
             <DialogFooter>
               <Button
