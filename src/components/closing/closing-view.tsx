@@ -126,6 +126,10 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   ).length;
   // Produk POS yang terjual tetapi qty-nya tidak ada di baris menu mana pun.
   const hanyaPos = baris.filter((b) => !b.menu_id).length;
+  // Bukan colorplate dan belum cocok dengan master /produk — kirim rekap terblokir.
+  const belumMaster = baris.filter(
+    (b) => !b.menu_id && b.products?.some((p) => perluMaster(p)),
+  ).length;
   // Dipaginasi di klien: ringkasan di atas dihitung dari seluruh baris.
   const paginasi = usePaginasiKlien(baris, {
     kunciReset: JSON.stringify([filter, includeDeleted]),
@@ -184,6 +188,21 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
           <p className="text-sm">
             {formatAngka(hanyaPos)} produk POS terjual tetapi tidak ada menunya
             di Colorplate.
+          </p>
+        ) : null}
+
+        {belumMaster > 0 ? (
+          <p className="text-sm">
+            {formatAngka(belumMaster)} di antaranya belum cocok dengan master
+            produk, jadi rekapnya belum bisa dikirim ke API.{" "}
+            {role === "admin" ? (
+              <Link
+                href="/produk"
+                className="text-primary font-medium underline-offset-4 hover:underline"
+              >
+                Buka master produk
+              </Link>
+            ) : null}
           </p>
         ) : null}
 
@@ -298,6 +317,7 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
                           <ProdukPos
                             products={b.products ?? []}
                             tidakAdaDiPos={b.not_in_pos ?? false}
+                            tanpaMenu={!b.menu_id}
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
@@ -336,16 +356,26 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   );
 }
 
+type ProdukPerbandingan = NonNullable<ClosingComparisonRow["products"]>[number];
+
+/** Produk non-colorplate di baris tanpa menu yang belum bisa dikirim lewat master. */
+function perluMaster(p: ProdukPerbandingan) {
+  return !p.is_colorplate && !p.master?.product_code;
+}
+
 /**
  * Produk POS yang dipetakan ke satu menu (qty-nya dijumlah di kolom POS), atau
- * satu produk POS untuk baris tanpa menu.
+ * satu produk POS untuk baris tanpa menu — beserta kecocokannya dengan master
+ * /produk, aturan yang sama dengan tab Kirim ke API.
  */
 function ProdukPos({
   products,
   tidakAdaDiPos,
+  tanpaMenu,
 }: {
-  products: NonNullable<ClosingComparisonRow["products"]>;
+  products: ProdukPerbandingan[];
   tidakAdaDiPos: boolean;
+  tanpaMenu: boolean;
 }) {
   if (products.length === 0 && tidakAdaDiPos) {
     return (
@@ -369,7 +399,9 @@ function ProdukPos({
             {p.product_group ? ` · ${p.product_group}` : ""}
             {p.multiplier !== 1 ? ` · × ${p.multiplier}` : ""}
           </div>
-          {p.is_mapped ? null : (
+          {tanpaMenu ? (
+            <KecocokanMaster produk={p} />
+          ) : p.is_mapped ? null : (
             <div className="text-xs text-amber-800 dark:text-amber-400">
               Belum dipetakan ke menu
             </div>
@@ -377,6 +409,45 @@ function ProdukPos({
         </li>
       ))}
     </ul>
+  );
+}
+
+function KecocokanMaster({ produk }: { produk: ProdukPerbandingan }) {
+  if (produk.is_colorplate) {
+    return (
+      <div className="text-muted-foreground text-xs">
+        Produk Colorplate · tidak dikirim ke API
+      </div>
+    );
+  }
+  const master = produk.master;
+  if (!master) {
+    return (
+      <div className="text-xs text-amber-800 dark:text-amber-400">
+        Belum ada di master produk
+      </div>
+    );
+  }
+  const kategori = [master.category, master.subcategory]
+    .filter(Boolean)
+    .join(" / ");
+  return (
+    <div className="mt-1 border-l-2 pl-2 text-xs">
+      <div>
+        <span className="text-muted-foreground">Master: </span>
+        <span className="font-medium">{master.name}</span>
+      </div>
+      <div className="text-muted-foreground font-mono">
+        {master.code}
+        {master.product_code ? ` · ${master.product_code}` : ""}
+        {kategori ? ` · ${kategori}` : ""}
+      </div>
+      {master.product_code ? null : (
+        <div className="text-amber-800 dark:text-amber-400">
+          Master belum punya Product Code
+        </div>
+      )}
+    </div>
   );
 }
 

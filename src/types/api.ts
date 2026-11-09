@@ -1377,6 +1377,21 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClosingComparisonMaster */
+        ClosingComparisonMaster: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Product Code */
+            product_code?: string | null;
+            /** Name */
+            name: string;
+            /** Category */
+            category?: string | null;
+            /** Subcategory */
+            subcategory?: string | null;
+        };
         /** ClosingComparisonProduct */
         ClosingComparisonProduct: {
             /** Product Id */
@@ -1389,6 +1404,12 @@ export interface components {
             multiplier: number;
             /** Is Mapped */
             is_mapped: boolean;
+            /**
+             * Is Colorplate
+             * @default false
+             */
+            is_colorplate: boolean;
+            master?: components["schemas"]["ClosingComparisonMaster"] | null;
         };
         /** ClosingComparisonResponse */
         ClosingComparisonResponse: {

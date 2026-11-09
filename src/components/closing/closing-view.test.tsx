@@ -104,6 +104,8 @@ beforeEach(() => {
                 product_name: "GREEN",
                 multiplier: 1,
                 is_mapped: true,
+                is_colorplate: true,
+                master: null,
               },
             ],
             pos_qty: 4,
@@ -125,6 +127,15 @@ beforeEach(() => {
                 product_group: "MINUMAN",
                 multiplier: 1,
                 is_mapped: false,
+                is_colorplate: false,
+                master: {
+                  id: 1,
+                  code: "M-TEH",
+                  product_code: "PRD-TEH",
+                  name: "Es Teh Manis",
+                  category: "Minuman",
+                  subcategory: "Teh",
+                },
               },
             ],
             pos_qty: 12,
@@ -326,7 +337,7 @@ describe("ClosingView — perbandingan POS", () => {
       "—",
       "—",
       "—",
-      "GREEN900009",
+      "GREEN900009Produk Colorplate · tidak dikirim ke API",
       "4",
       "4",
       "0",
@@ -338,17 +349,83 @@ describe("ClosingView — perbandingan POS", () => {
     ).toBeVisible();
   });
 
-  it("transaksi POS bukan Colorplate ikut tampil dengan group-nya", async () => {
+  it("transaksi POS bukan Colorplate tampil dengan data master produk", async () => {
     renderWithQuery(<ClosingView role="manager" />);
 
     const row = (await screen.findByText("ES TEH")).closest("tr")!;
     expect(within(row).getByText("Tidak ada di Colorplate")).toBeVisible();
     expect(within(row).getByText("700001 · MINUMAN")).toBeVisible();
-    expect(within(row).getByText("Belum dipetakan ke menu")).toBeVisible();
+    expect(within(row).getByText("Es Teh Manis")).toBeVisible();
+    expect(
+      within(row).getByText("M-TEH · PRD-TEH · Minuman / Teh"),
+    ).toBeVisible();
+    // Produk non-colorplate dikirim lewat master, bukan lewat mapping menu.
+    expect(within(row).queryByText("Belum dipetakan ke menu")).toBeNull();
     expect(within(row).getAllByRole("cell").at(-5)).toHaveTextContent("12");
+    expect(screen.queryByText(/belum cocok dengan master produk/)).toBeNull();
 
     const salmon = screen.getByText("Salmon Nigiri").closest("tr")!;
     expect(within(salmon).queryByText("Belum dipetakan ke menu")).toBeNull();
+    expect(within(salmon).queryByText(/Master/)).toBeNull();
+  });
+
+  it("produk POS yang belum ada di master produk diberi keterangan", async () => {
+    const tanpaMenu = (product_id: number, nama: string, master: unknown) => ({
+      outlet_code: "STTSM",
+      production_date: "2026-10-02",
+      menu_id: null,
+      menu_code: null,
+      menu_name: null,
+      sold: null,
+      waste: null,
+      adjustment: null,
+      compensation: null,
+      products: [
+        {
+          product_id,
+          product_name: nama,
+          product_group: "MINUMAN",
+          multiplier: 1,
+          is_mapped: false,
+          is_colorplate: false,
+          master,
+        },
+      ],
+      pos_qty: 1,
+    });
+    server.use(
+      http.get("/api/closing-reports/comparison", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            tanpaMenu(700002, "AIR MINERAL", null),
+            tanpaMenu(700003, "KOPI", {
+              id: 2,
+              code: "M-KOPI",
+              product_code: null,
+              name: "Kopi Hitam",
+              category: null,
+              subcategory: null,
+            }),
+          ],
+        }),
+      ),
+    );
+    renderWithQuery(<ClosingView role="admin" />);
+
+    const air = (await screen.findByText("AIR MINERAL")).closest("tr")!;
+    expect(within(air).getByText("Belum ada di master produk")).toBeVisible();
+    const kopi = screen.getByText("KOPI").closest("tr")!;
+    expect(within(kopi).getByText("Kopi Hitam")).toBeVisible();
+    expect(
+      within(kopi).getByText("Master belum punya Product Code"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/2 di antaranya belum cocok dengan master produk/),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Buka master produk" }),
+    ).toHaveAttribute("href", "/produk");
   });
 
   it("admin hanya diminta memetakan menu yang belum dipetakan", async () => {
