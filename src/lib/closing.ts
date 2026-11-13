@@ -75,6 +75,27 @@ export const STATUS_LOG_KIRIM = {
   gagal: { label: "Gagal", nada: "buruk" },
 } as const;
 
+/**
+ * 409 stale_sequence: API tujuan sudah memegang versi lebih baru dan kiriman
+ * ini TIDAK disimpan. Backend mencatatnya `gagal` + HTTP 409 (409 lain =
+ * `duplikat`). Mengulangnya pasti ditolak lagi; yang benar kirim rekap baru.
+ */
+export function ditolakSequenceUsang(log: {
+  status: string;
+  http_status?: number | null;
+}) {
+  return log.status === "gagal" && log.http_status === 409;
+}
+
+/** Kiriman yang belum sampai bisa diulang dengan messageId yang sama. */
+export function bisaDiulang(
+  log: { status: string; http_status?: number | null } | null | undefined,
+) {
+  if (!log) return false;
+  if (ditolakSequenceUsang(log)) return false;
+  return log.status === "gagal" || log.status === "mengirim";
+}
+
 /** `["data", "items", 0, "sold"]` → `data.items[0].sold` (lokasi error Pydantic). */
 export function formatLokasiError(loc: unknown): string {
   if (!Array.isArray(loc) || loc.length === 0) return "(pesan)";

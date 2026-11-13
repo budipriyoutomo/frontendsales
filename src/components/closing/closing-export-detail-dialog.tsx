@@ -12,7 +12,7 @@ import {
 import { KartuSkeleton, KeadaanGagal } from "@/components/dashboard/states";
 import { StatusLogKirimBadge } from "@/components/closing/closing-status-badge";
 import { useClosingExport } from "@/hooks/use-closing";
-import { formatJson } from "@/lib/closing";
+import { bisaDiulang, formatJson } from "@/lib/closing";
 import {
   formatAngka,
   formatTanggal,
@@ -99,7 +99,7 @@ export function ClosingExportDetailDialog({
               <dd>{formatTanggalWaktuUtc(data.finished_at)}</dd>
             </dl>
 
-            {data.status === "gagal" || data.status === "mengirim" ? (
+            {bisaDiulang(data) ? (
               <Button
                 variant="outline"
                 size="sm"

@@ -126,7 +126,7 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
   ).length;
   // Produk POS yang terjual tetapi qty-nya tidak ada di baris menu mana pun.
   const hanyaPos = baris.filter((b) => !b.menu_id).length;
-  // Bukan colorplate dan belum cocok dengan master /produk — kirim rekap terblokir.
+  // Belum cocok dengan master /produk (termasuk colorplate) — kirim rekap terblokir.
   const belumMaster = baris.filter(
     (b) => !b.menu_id && b.products?.some((p) => perluMaster(p)),
   ).length;
@@ -155,9 +155,10 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
             </p>
             <p>
               Tabel ini menampilkan data POS apa adanya, termasuk produk
-              colorplate sebagai baris <em>hanya POS</em>. Rekap yang dikirim ke
-              API tidak menghitung produk colorplate itu lagi, jadi Total Sold
-              di tab Kirim ke API bisa lebih kecil — itu bukan kesalahan.
+              colorplate (piring per warna) sebagai baris <em>hanya POS</em>.
+              Rekap yang dikirim ke API membawa produk colorplate sebagai
+              pendapatan piring, terpisah dari menu: qty-nya sudah terhitung di
+              Colorplate terjual, jadi tidak ditambahkan lagi ke menu.
             </p>
           </CaraKerja>
 
@@ -358,9 +359,9 @@ function Perbandingan({ filter, role }: { filter: Filter; role: Role }) {
 
 type ProdukPerbandingan = NonNullable<ClosingComparisonRow["products"]>[number];
 
-/** Produk non-colorplate di baris tanpa menu yang belum bisa dikirim lewat master. */
+/** Produk di baris tanpa menu yang belum bisa dikirim lewat master. */
 function perluMaster(p: ProdukPerbandingan) {
-  return !p.is_colorplate && !p.master?.product_code;
+  return !p.master?.product_code;
 }
 
 /**
@@ -413,13 +414,19 @@ function ProdukPos({
 }
 
 function KecocokanMaster({ produk }: { produk: ProdukPerbandingan }) {
-  if (produk.is_colorplate) {
-    return (
-      <div className="text-muted-foreground text-xs">
-        Produk Colorplate · tidak dikirim ke API
-      </div>
-    );
-  }
+  return (
+    <>
+      {produk.is_colorplate ? (
+        <div className="text-muted-foreground text-xs">
+          Produk Colorplate · dikirim sebagai pendapatan piring
+        </div>
+      ) : null}
+      <InfoMaster produk={produk} />
+    </>
+  );
+}
+
+function InfoMaster({ produk }: { produk: ProdukPerbandingan }) {
   const master = produk.master;
   if (!master) {
     return (

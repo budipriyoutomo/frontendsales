@@ -42,6 +42,7 @@ import {
   useUlangiKirimClosing,
 } from "@/hooks/use-closing";
 import { ApiError } from "@/lib/api/client";
+import { bisaDiulang, ditolakSequenceUsang } from "@/lib/closing";
 import type { Filter } from "@/lib/filter";
 import {
   formatAngka,
@@ -71,6 +72,11 @@ function umumkanHasil(log: ClosingExportDetail) {
     toast.success(`Rekap ${pasangan} terkirim.`);
   } else if (log.status === "duplikat") {
     toast.success(`Rekap ${pasangan} sudah ada di API tujuan.`);
+  } else if (ditolakSequenceUsang(log)) {
+    toast.error(`Rekap ${pasangan} ditolak API tujuan.`, {
+      description:
+        "API tujuan sudah memegang versi yang lebih baru, jadi kiriman ini tidak disimpan. Tekan Kirim lagi untuk mengirim dengan nomor versi yang baru.",
+    });
   } else {
     toast.error(`Rekap ${pasangan} gagal dikirim.`, {
       description: [log.error, `${formatAngka(log.attempts)} percobaan`]
@@ -78,11 +84,6 @@ function umumkanHasil(log: ClosingExportDetail) {
         .join(" · "),
     });
   }
-}
-
-/** Kiriman terakhir bisa diulang dengan messageId yang sama. */
-function bisaDiulang(log: ClosingExportSummary | null | undefined) {
-  return log?.status === "gagal" || log?.status === "mengirim";
 }
 
 /**

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   STATUS_PESAN,
+  bisaDiulang,
+  ditolakSequenceUsang,
   formatJson,
   formatLokasiError,
   formatSelisih,
@@ -97,5 +99,38 @@ describe("formatLokasiError", () => {
 describe("formatJson", () => {
   it("rapi dengan indentasi 2 spasi", () => {
     expect(formatJson({ a: [1] })).toBe('{\n  "a": [\n    1\n  ]\n}');
+  });
+});
+
+describe("bisaDiulang", () => {
+  it.each([
+    [{ status: "gagal", http_status: 503 }, true],
+    [{ status: "gagal", http_status: null }, true],
+    [{ status: "mengirim", http_status: null }, true],
+    [{ status: "terkirim", http_status: 201 }, false],
+    [{ status: "duplikat", http_status: 409 }, false],
+    // 409 stale_sequence: API tujuan sudah memegang versi lebih baru.
+    [{ status: "gagal", http_status: 409 }, false],
+  ])("%o → %s", (log, harapan) => {
+    expect(bisaDiulang(log)).toBe(harapan);
+  });
+
+  it("tanpa kiriman tidak bisa diulang", () => {
+    expect(bisaDiulang(null)).toBe(false);
+    expect(bisaDiulang(undefined)).toBe(false);
+  });
+});
+
+describe("ditolakSequenceUsang", () => {
+  it("hanya gagal + HTTP 409", () => {
+    expect(ditolakSequenceUsang({ status: "gagal", http_status: 409 })).toBe(
+      true,
+    );
+    expect(ditolakSequenceUsang({ status: "duplikat", http_status: 409 })).toBe(
+      false,
+    );
+    expect(ditolakSequenceUsang({ status: "gagal", http_status: 422 })).toBe(
+      false,
+    );
   });
 });

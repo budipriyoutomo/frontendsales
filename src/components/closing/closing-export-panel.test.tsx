@@ -359,6 +359,74 @@ describe("ClosingExportPanel", () => {
     );
   });
 
+  it("409 sequence usang tampil sebagai ditolak, bukan terkirim", async () => {
+    hasilKirim = () =>
+      HttpResponse.json(
+        {
+          success: true,
+          data: {
+            ...kiriman(9, {
+              status: "gagal",
+              http_status: 409,
+              error: "ditolak: API tujuan sudah memegang versi lebih baru",
+            }),
+            payload: {},
+            response_body: '{"reason":"stale_sequence","currentSequence":4}',
+          },
+        },
+        { status: 201 },
+      );
+    const user = userEvent.setup();
+    await tampil();
+
+    await user.click(
+      within(barisTanggal(/4 Okt/)).getByRole("button", { name: /^kirim/i }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^kirim$/i,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringMatching(/ditolak/i),
+        expect.objectContaining({
+          description: expect.stringMatching(/versi yang lebih baru/),
+        }),
+      ),
+    );
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("kiriman yang ditolak karena sequence usang tidak bisa diulang", async () => {
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            pasangan("2026-10-01", {
+              last_attempt: kiriman(3, {
+                status: "gagal",
+                http_status: 409,
+                error: "ditolak: API tujuan sudah memegang versi lebih baru",
+              }),
+            }),
+          ],
+        }),
+      ),
+    );
+    await tampil();
+
+    const baris = barisTanggal(/1 Okt/);
+    expect(
+      within(baris).queryByRole("button", { name: /ulangi/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(baris).getByRole("button", { name: /^kirim/i }),
+    ).toBeEnabled();
+  });
+
   it("422 dari backend menampilkan pesan blokirnya", async () => {
     hasilKirim = () =>
       HttpResponse.json(
