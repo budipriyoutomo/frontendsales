@@ -307,9 +307,17 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
     produk_colorplate_dipetakan: colorplate,
     produk_belum_master: tanpaMaster,
     colorplate_tanpa_closing: tanpaClosing,
+    menu_tanpa_warna: tanpaWarna,
+    warna_tidak_lengkap: warnaTidakLengkap,
   } = pasangan;
-  const soalMenu = belum.length + dobel.length + colorplate.length > 0;
-  if (!soalMenu && tanpaMaster.length === 0 && tanpaClosing.length === 0)
+  const soalMenu =
+    belum.length + dobel.length + colorplate.length + tanpaWarna.length > 0;
+  if (
+    !soalMenu &&
+    tanpaMaster.length === 0 &&
+    tanpaClosing.length === 0 &&
+    warnaTidakLengkap.length === 0
+  )
     return null;
 
   return (
@@ -334,14 +342,33 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
           {d.menus.join(", ")} — lepas mapping-nya, qty sudah ada di Colorplate
         </p>
       ))}
+      {tanpaWarna.length > 0 ? (
+        <p>
+          {formatAngka(tanpaWarna.length)} menu terjual belum punya warna
+          piring:{" "}
+          {tanpaWarna
+            .map((m) => m.menu_code ?? m.menu_name ?? m.menu_id)
+            .join(", ")}
+        </p>
+      ) : null}
       {soalMenu ? (
         <Link href="/closing-menu" className={TAUTAN}>
           {/* Tanda "tidak ada di POS" hanya menjawab menu yang belum dipetakan. */}
           {belum.length > 0
             ? "Petakan menu atau tandai tidak ada di POS"
-            : "Perbaiki mapping menu"}
+            : dobel.length + colorplate.length > 0
+              ? "Perbaiki mapping menu"
+              : "Isi warna piring menu"}
         </Link>
       ) : null}
+      {warnaTidakLengkap.map((w) => (
+        <p key={`warna-${w.platecolor}`}>
+          Piring {w.platecolor}:{" "}
+          {w.pos_qty === 0
+            ? `${formatAngka(w.colorplate_sold)} terjual di closing, tidak ada di POS — harganya tidak diketahui`
+            : `${formatAngka(w.pos_qty)} terjual di POS, tidak ada menu closing berwarna ini — periksa warna piring menu`}
+        </p>
+      ))}
       {tanpaMaster.length > 0 ? (
         <>
           <p>

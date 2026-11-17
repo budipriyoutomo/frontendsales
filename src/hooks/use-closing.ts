@@ -81,7 +81,8 @@ export function useClosingReport(closingReportId: string | null) {
 }
 
 /** `unmapped` = masih perlu tindakan admin; menu bertanda `not_in_pos` tidak ikut. */
-export type StatusMenu = "all" | "mapped" | "unmapped" | "not_in_pos";
+export type StatusMenu =
+  "all" | "mapped" | "unmapped" | "not_in_pos" | "no_platecolor";
 
 export function useClosingMenus(status: StatusMenu, q: string, offset: number) {
   return useQuery({

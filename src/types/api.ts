@@ -934,7 +934,8 @@ export interface paths {
          * @description menuCode yang pernah muncul di closing report.
          *
          *     `unmapped` = belum punya mapping aktif dan tidak ditandai tidak ada di POS
-         *     (masih memblokir kirim rekap); `not_in_pos` = ditandai tidak ada di POS.
+         *     (masih memblokir kirim rekap); `not_in_pos` = ditandai tidak ada di POS;
+         *     `no_platecolor` = belum punya warna piring (memblokir kalau sold > 0).
          */
         get: operations["list_closing_menus_api_closing_menus_get"];
         put?: never;
@@ -967,6 +968,26 @@ export interface paths {
          * @description Tandai / lepas tanda "tidak ada di POS". Menu bertanda tidak memblokir kirim rekap closing.
          */
         patch: operations["update_closing_menu_api_closing_menus__menu_id__patch"];
+        trace?: never;
+    };
+    "/api/closing-menus/{menu_id}/platecolor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Closing Menu Platecolor
+         * @description Warna piring menu. Kirim rekap closing memakai harga piring warna ini untuk colorplateSold.
+         */
+        put: operations["update_closing_menu_platecolor_api_closing_menus__menu_id__platecolor_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/closing-menus/{menu_id}/products": {
@@ -1464,6 +1485,18 @@ export interface components {
              */
             not_in_pos: boolean;
         };
+        /**
+         * ClosingExportColorMismatch
+         * @description Warna yang hanya terjual di closing (harga tidak diketahui) atau hanya di POS.
+         */
+        ClosingExportColorMismatch: {
+            /** Platecolor */
+            platecolor: string;
+            /** Colorplate Sold */
+            colorplate_sold: number;
+            /** Pos Qty */
+            pos_qty: number;
+        };
         /** ClosingExportDetail */
         ClosingExportDetail: {
             /** Id */
@@ -1596,6 +1629,10 @@ export interface components {
             produk_belum_master: components["schemas"]["ClosingExportPosProduct"][];
             /** Colorplate Tanpa Closing */
             colorplate_tanpa_closing: components["schemas"]["ClosingExportPosProduct"][];
+            /** Menu Tanpa Warna */
+            menu_tanpa_warna: components["schemas"]["ClosingExportUnmappedMenu"][];
+            /** Warna Tidak Lengkap */
+            warna_tidak_lengkap: components["schemas"]["ClosingExportColorMismatch"][];
             last_attempt?: components["schemas"]["ClosingExportSummary"] | null;
             last_sent?: components["schemas"]["ClosingExportSummary"] | null;
         };
@@ -1739,6 +1776,12 @@ export interface components {
             not_in_pos_by?: string | null;
             /** Not In Pos At */
             not_in_pos_at?: string | null;
+            /** Platecolor */
+            platecolor?: string | null;
+            /** Platecolor By */
+            platecolor_by?: string | null;
+            /** Platecolor At */
+            platecolor_at?: string | null;
             /** Products */
             products?: components["schemas"]["ClosingMenuProductResponse"][];
             /**
@@ -3188,6 +3231,14 @@ export interface components {
             is_active?: boolean | null;
             /** Requires Closing */
             requires_closing?: boolean | null;
+        };
+        /**
+         * UpdateClosingMenuPlatecolorRequest
+         * @description Warna piring menu; harus ada di data COLORPLATE POS. `null` = kosongkan.
+         */
+        UpdateClosingMenuPlatecolorRequest: {
+            /** Platecolor */
+            platecolor?: string | null;
         };
         /**
          * UpdateClosingMenuProductRequest
@@ -5049,7 +5100,7 @@ export interface operations {
     list_closing_menus_api_closing_menus_get: {
         parameters: {
             query?: {
-                status?: "all" | "mapped" | "unmapped" | "not_in_pos";
+                status?: "all" | "mapped" | "unmapped" | "not_in_pos" | "no_platecolor";
                 /** @description Cari menuCode atau nama menu */
                 q?: string | null;
                 limit?: number;
@@ -5124,6 +5175,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateClosingMenuRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingMenuDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_closing_menu_platecolor_api_closing_menus__menu_id__platecolor_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                menu_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClosingMenuPlatecolorRequest"];
             };
         };
         responses: {

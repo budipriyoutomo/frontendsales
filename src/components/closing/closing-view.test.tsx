@@ -337,7 +337,7 @@ describe("ClosingView — perbandingan POS", () => {
       "—",
       "—",
       "—",
-      "GREEN900009Produk Colorplate · dikirim sebagai pendapatan piringBelum ada di master produk",
+      "GREEN900009Produk Colorplate · harga piring masuk ke menu sesuai warna piringnya",
       "4",
       "4",
       "0",
@@ -362,10 +362,8 @@ describe("ClosingView — perbandingan POS", () => {
     // Produk non-colorplate dikirim lewat master, bukan lewat mapping menu.
     expect(within(row).queryByText("Belum dipetakan ke menu")).toBeNull();
     expect(within(row).getAllByRole("cell").at(-5)).toHaveTextContent("12");
-    // Hanya GREEN (colorplate tanpa master) yang memblokir; ES TEH sudah cocok.
-    expect(
-      screen.getByText(/belum cocok dengan master produk/),
-    ).toHaveTextContent(/^1 di antaranya/);
+    // ES TEH sudah cocok; GREEN colorplate tidak butuh master.
+    expect(screen.queryByText(/belum cocok dengan master produk/)).toBeNull();
 
     const salmon = screen.getByText("Salmon Nigiri").closest("tr")!;
     expect(within(salmon).queryByText("Belum dipetakan ke menu")).toBeNull();
@@ -568,6 +566,8 @@ describe("ClosingView — kirim ke API", () => {
               produk_colorplate_dipetakan: [],
               produk_belum_master: [],
               colorplate_tanpa_closing: [],
+              menu_tanpa_warna: [],
+              warna_tidak_lengkap: [],
               last_attempt: null,
               last_sent: null,
             },

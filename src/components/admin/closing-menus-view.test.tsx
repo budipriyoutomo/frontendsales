@@ -34,6 +34,7 @@ type Menu = {
   not_in_pos: boolean;
   not_in_pos_by: string | null;
   not_in_pos_at: string | null;
+  platecolor?: string | null;
   products: Produk[];
   first_seen_at: string;
   last_seen_at: string;
@@ -660,6 +661,113 @@ describe("ClosingMenusView — tidak ada di POS", () => {
       expect(kirimPatch).toEqual([
         { url: "/api/closing-menus/1", body: { not_in_pos: false } },
       ]),
+    );
+  });
+});
+
+describe("ClosingMenusView — warna piring", () => {
+  let kirimPut: { url: string; body: unknown }[];
+
+  beforeEach(() => {
+    kirimPut = [];
+    server.use(
+      http.get("/api/product-menus/platecolors", () =>
+        HttpResponse.json({ success: true, data: ["BLUE", "RED"] }),
+      ),
+      http.put(
+        "/api/closing-menus/:id/platecolor",
+        async ({ request, params }) => {
+          const body = (await request.json()) as { platecolor: string | null };
+          kirimPut.push({
+            url: `/api/closing-menus/${params.id}/platecolor`,
+            body,
+          });
+          const i = menus.findIndex((m) => m.id === Number(params.id));
+          menus[i] = { ...menus[i], platecolor: body.platecolor };
+          return HttpResponse.json({ success: true, data: menus[i] });
+        },
+      ),
+    );
+  });
+
+  async function bukaDialog(nama: string) {
+    const user = userEvent.setup();
+    renderWithQuery(<ClosingMenusView />);
+    await screen.findByText("Cara kerja");
+    await user.click(screen.getByRole("combobox", { name: /status/i }));
+    await user.click(await screen.findByRole("option", { name: "Semua" }));
+    const row = (await screen.findByText(nama)).closest("tr")!;
+    expect(within(row).getByText("Belum diisi")).toBeVisible();
+    await user.click(
+      within(row).getByRole("button", { name: /atur mapping/i }),
+    );
+    return { user, dialog: await screen.findByRole("dialog") };
+  }
+
+  it("memilih warna piring menyimpannya, lalu tampil di daftar", async () => {
+    const { user, dialog } = await bukaDialog("Salmon Nigiri");
+
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "Warna piring" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "RED" }));
+
+    await waitFor(() =>
+      expect(kirimPut).toEqual([
+        {
+          url: "/api/closing-menus/1/platecolor",
+          body: { platecolor: "RED" },
+        },
+      ]),
+    );
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "Salmon Nigiri memakai harga piring RED.",
+    );
+
+    await user.keyboard("{Escape}");
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr")!;
+    expect(await within(row).findByText("RED")).toBeVisible();
+  });
+
+  it("pilih belum diisi mengosongkan warna", async () => {
+    menus[0] = { ...menus[0], platecolor: "BLUE" };
+    const user = userEvent.setup();
+    renderWithQuery(<ClosingMenusView />);
+    await screen.findByText("Cara kerja");
+    await user.click(screen.getByRole("combobox", { name: /status/i }));
+    await user.click(await screen.findByRole("option", { name: "Semua" }));
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr")!;
+    await user.click(
+      within(row).getByRole("button", { name: /atur mapping/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "Warna piring" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Belum diisi" }),
+    );
+
+    await waitFor(() =>
+      expect(kirimPut).toEqual([
+        { url: "/api/closing-menus/1/platecolor", body: { platecolor: null } },
+      ]),
+    );
+  });
+
+  it("filter belum ada warna piring dikirim ke server", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<ClosingMenusView />);
+    await screen.findByText("Cara kerja");
+
+    await user.click(screen.getByRole("combobox", { name: /status/i }));
+    await user.click(
+      await screen.findByRole("option", { name: "Belum ada warna piring" }),
+    );
+
+    await waitFor(() =>
+      expect(permintaanDaftar.at(-1)?.get("status")).toBe("no_platecolor"),
     );
   });
 });

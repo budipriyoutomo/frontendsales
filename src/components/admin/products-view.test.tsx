@@ -15,6 +15,12 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const unduh = vi.fn();
+vi.mock("@/lib/download", async (asli) => ({
+  ...(await asli<typeof import("@/lib/download")>()),
+  unduhResponse: (...args: unknown[]) => unduh(...args),
+}));
+
 function mapping(
   id: number,
   outlet_code: string,
@@ -88,6 +94,7 @@ function cocok(p: ReturnType<typeof produk>, kata: string) {
 beforeEach(() => {
   toastError.mockClear();
   toastSuccess.mockClear();
+  unduh.mockClear();
   permintaanDaftar = [];
   daftar = [
     produk(1, "P-001", "Red Plate", {
@@ -107,7 +114,10 @@ beforeEach(() => {
       const q = params.get("q") ?? "";
       const limit = Number(params.get("limit") ?? 50);
       const offset = Number(params.get("offset") ?? 0);
-      const cocokSemua = q ? daftar.filter((p) => cocok(p, q)) : daftar;
+      const kodeSama = params.get("same_code") === "true";
+      const cocokSemua = daftar.filter(
+        (p) => (!q || cocok(p, q)) && (!kodeSama || p.product_code === p.code),
+      );
       const data = cocokSemua.slice(offset, offset + limit);
       return HttpResponse.json({
         success: true,
@@ -251,6 +261,110 @@ describe("ProductsView — daftar", () => {
     renderWithQuery(<ProductsView />);
 
     expect(await screen.findByText("Belum ada produk")).toBeInTheDocument();
+  });
+});
+
+describe("ProductsView — Product Code sama dengan ProductID", () => {
+  beforeEach(() => {
+    daftar = [
+      produk(1, "101", "Impor", { product_code: "101" }),
+      produk(2, "P-002", "Sudah diganti"),
+    ];
+  });
+
+  it("ditandai di tabel", async () => {
+    renderWithQuery(<ProductsView />);
+
+    const impor = (await screen.findByText("Impor")).closest("tr")!;
+    expect(within(impor).getByText("= ProductID")).toBeInTheDocument();
+    const lain = screen.getByText("Sudah diganti").closest("tr")!;
+    expect(within(lain).queryByText("= ProductID")).not.toBeInTheDocument();
+  });
+
+  it("filter dikirim ke server dan kembali ke halaman pertama", async () => {
+    renderWithQuery(<ProductsView />);
+    const user = userEvent.setup();
+    await screen.findByText("Sudah diganti");
+
+    await user.click(screen.getByLabelText("Hanya Product Code = ProductID"));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Sudah diganti")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Impor")).toBeInTheDocument();
+    expect(permintaanDaftar.at(-1)!.get("same_code")).toBe("true");
+    expect(permintaanDaftar.at(-1)!.get("offset")).toBe("0");
+  });
+
+  it("tanpa hasil memberi keterangan filter", async () => {
+    daftar = [produk(2, "P-002", "Sudah diganti")];
+    renderWithQuery(<ProductsView />);
+    await screen.findByText("Sudah diganti");
+
+    await userEvent
+      .setup()
+      .click(screen.getByLabelText("Hanya Product Code = ProductID"));
+
+    expect(await screen.findByText("Tidak ada yang cocok")).toBeVisible();
+    expect(screen.getByText(/matikan filter/)).toBeVisible();
+  });
+});
+
+describe("ProductsView — export CSV", () => {
+  let permintaanEkspor: URLSearchParams[];
+
+  beforeEach(() => {
+    permintaanEkspor = [];
+    server.use(
+      http.get("/api/products/export", ({ request }) => {
+        permintaanEkspor.push(new URL(request.url).searchParams);
+        return new HttpResponse("ProductID\nP-001\n", {
+          headers: {
+            "content-type": "text/csv",
+            "content-disposition":
+              'attachment; filename="produk-2026-11-17.csv"',
+          },
+        });
+      }),
+    );
+  });
+
+  it("memicu unduhan dengan filter yang sedang aktif", async () => {
+    renderWithQuery(<ProductsView />);
+    const user = userEvent.setup();
+    await screen.findByText("Red Plate");
+
+    await user.type(screen.getByLabelText("Cari"), "plate");
+    await waitFor(() =>
+      expect(permintaanDaftar.at(-1)!.get("q")).toBe("plate"),
+    );
+    await user.click(screen.getByLabelText("Hanya Product Code = ProductID"));
+    await user.click(screen.getByRole("button", { name: "Ekspor CSV" }));
+
+    await waitFor(() => expect(unduh).toHaveBeenCalledTimes(1));
+    expect(permintaanEkspor.at(-1)!.get("q")).toBe("plate");
+    expect(permintaanEkspor.at(-1)!.get("same_code")).toBe("true");
+    expect(permintaanEkspor.at(-1)!.has("limit")).toBe(false);
+    expect(toastSuccess).toHaveBeenCalled();
+  });
+
+  it("gagal → toast error", async () => {
+    server.use(
+      http.get("/api/products/export", () =>
+        HttpResponse.json({ detail: "x" }, { status: 500 }),
+      ),
+    );
+    renderWithQuery(<ProductsView />);
+    await screen.findByText("Red Plate");
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Ekspor CSV" }));
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Ekspor gagal. Coba lagi."),
+    );
+    expect(unduh).not.toHaveBeenCalled();
   });
 });
 

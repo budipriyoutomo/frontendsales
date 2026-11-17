@@ -45,7 +45,7 @@ export type ForwardResult =
 const TIMEOUT_DEFAULT_MS = 35_000;
 /** Export CSV memang menarik seluruh hasil filter — beri waktu lebih. */
 const TIMEOUT_EXPORT_DEFAULT_MS = 120_000;
-const PATH_EXPORT = new Set(["/api/sales/export"]);
+const PATH_EXPORT = new Set(["/api/sales/export", "/api/products/export"]);
 
 function angkaEnv(nama: string, cadangan: number): number {
   const nilai = Number(process.env[nama]);

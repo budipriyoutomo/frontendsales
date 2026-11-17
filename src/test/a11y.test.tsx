@@ -247,6 +247,8 @@ describe("Aksesibilitas dasar (8.7)", () => {
               produk_colorplate_dipetakan: [],
               produk_belum_master: [],
               colorplate_tanpa_closing: [],
+              menu_tanpa_warna: [],
+              warna_tidak_lengkap: [],
               last_attempt: kiriman,
               last_sent: { ...kiriman, status: "terkirim", http_status: 201 },
             },

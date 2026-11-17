@@ -56,6 +56,8 @@ function pasangan(tanggal: string, lain = {}) {
     produk_colorplate_dipetakan: [],
     produk_belum_master: [],
     colorplate_tanpa_closing: [],
+    menu_tanpa_warna: [],
+    warna_tidak_lengkap: [],
     last_attempt: null,
     last_sent: null,
     ...lain,
@@ -277,6 +279,58 @@ describe("ClosingExportPanel", () => {
     expect(
       within(tanpaClosing).getByRole("button", { name: /^kirim/i }),
     ).toBeDisabled();
+  });
+
+  it("alasan blokir warna piring menyebut menu dan warnanya", async () => {
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            pasangan("2026-10-04", {
+              can_send: false,
+              menu_tanpa_warna: [
+                {
+                  menu_id: "1f5a6530-0543-52d3-bd0b-0dcac3654440",
+                  menu_code: "SU-002",
+                  menu_name: "Tuna",
+                },
+              ],
+            }),
+            pasangan("2026-10-03", {
+              can_send: false,
+              warna_tidak_lengkap: [
+                { platecolor: "BLUE", colorplate_sold: 10, pos_qty: 0 },
+                { platecolor: "GOLD", colorplate_sold: 0, pos_qty: 2 },
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+    await tampil();
+
+    const tanpaWarna = barisTanggal(/4 Okt/);
+    expect(
+      within(tanpaWarna).getByText(
+        /1 menu terjual belum punya warna piring: SU-002/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(tanpaWarna).getByRole("link", { name: /isi warna piring menu/i }),
+    ).toHaveAttribute("href", "/closing-menu");
+
+    const tidakLengkap = barisTanggal(/3 Okt/);
+    expect(
+      within(tidakLengkap).getByText(
+        /piring BLUE: 10 terjual di closing, tidak ada di POS/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(tidakLengkap).getByText(
+        /piring GOLD: 2 terjual di POS, tidak ada menu closing/i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("kirim lewat dialog konfirmasi, lalu status dimuat ulang", async () => {

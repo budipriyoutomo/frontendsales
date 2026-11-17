@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { CheckCircle2, CircleOff } from "lucide-react";
+import { CheckCircle2, CircleOff, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -48,6 +48,7 @@ import { ProductImportDialog } from "@/components/admin/product-import-dialog";
 import { ProductPosMappingDialog } from "@/components/admin/product-pos-mapping-dialog";
 import { api } from "@/lib/api/browser";
 import { ApiError } from "@/lib/api/client";
+import { unduhResponse } from "@/lib/download";
 import {
   PANJANG_KATEGORI_MAKSIMAL,
   PANJANG_SUBKATEGORI_MAKSIMAL,
@@ -151,6 +152,18 @@ function BelumDiisi() {
   );
 }
 
+/**
+ * Product Code masih sama dengan ProductID — biasanya produk hasil impor dari
+ * transaksi yang Product Code-nya belum diganti ke kode sebenarnya.
+ */
+function SamaDenganProductId() {
+  return (
+    <span className="ml-2 font-sans text-xs text-amber-800 dark:text-amber-400">
+      = ProductID
+    </span>
+  );
+}
+
 function PesanGalat({ id, pesan }: { id: string; pesan?: string | null }) {
   return pesan ? (
     <p id={`${id}-galat`} role="alert" className="text-destructive text-xs">
@@ -166,6 +179,8 @@ export function ProductsView() {
   const [sasaran, setSasaran] = useState<Sasaran>(null);
   const [mappingId, setMappingId] = useState<number | null>(null);
   const [imporBuka, setImporBuka] = useState(false);
+  const [kodeSama, setKodeSama] = useState(false);
+  const [mengekspor, setMengekspor] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -176,17 +191,47 @@ export function ProductsView() {
     return () => clearTimeout(t);
   }, [cari]);
 
+  /** Filter yang sama dipakai daftar dan export. */
+  const filter = {
+    q: cariTerkirim || undefined,
+    same_code: kodeSama || undefined,
+  };
+
   const products = useQuery({
-    queryKey: ["products", "list", cariTerkirim, offset],
+    queryKey: ["products", "list", cariTerkirim, kodeSama, offset],
     placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       api.requestWithMeta<Product[]>("/api/products", {
         signal,
-        query: { q: cariTerkirim || undefined, limit: LIMIT_PRODUK, offset },
+        query: { ...filter, limit: LIMIT_PRODUK, offset },
       }),
   });
 
+  async function ekspor() {
+    setMengekspor(true);
+    try {
+      const response = await api.requestRaw("/api/products/export", {
+        query: filter,
+      });
+      if (!response.ok) {
+        throw new ApiError({
+          status: response.status,
+          message: "Ekspor gagal. Coba lagi.",
+        });
+      }
+      await unduhResponse(response, "produk.csv");
+      toast.success("Berkas CSV sedang diunduh.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Ekspor gagal. Coba lagi.",
+      );
+    } finally {
+      setMengekspor(false);
+    }
+  }
+
   const tampil = products.data?.data ?? [];
+  const adaFilter = Boolean(cariTerkirim) || kodeSama;
 
   return (
     <div className="space-y-6">
@@ -208,6 +253,10 @@ export function ProductsView() {
         }
         actions={
           <>
+            <Button variant="outline" onClick={ekspor} disabled={mengekspor}>
+              <Download aria-hidden className="size-4" />
+              {mengekspor ? "Menyiapkan…" : "Ekspor CSV"}
+            </Button>
             <Button variant="outline" onClick={() => setImporBuka(true)}>
               Ambil dari transaksi
             </Button>
@@ -230,6 +279,19 @@ export function ProductsView() {
                 autoComplete="off"
               />
             </div>
+            <div className="flex h-9 items-center gap-2">
+              <Switch
+                id="produk-kode-sama"
+                checked={kodeSama}
+                onCheckedChange={(v) => {
+                  setKodeSama(v);
+                  setOffset(0);
+                }}
+              />
+              <Label htmlFor="produk-kode-sama">
+                Hanya Product Code = ProductID
+              </Label>
+            </div>
           </div>
 
           {products.isPending ? (
@@ -239,7 +301,7 @@ export function ProductsView() {
               error={products.error}
               onCobaLagi={products.refetch}
             />
-          ) : tampil.length === 0 && !cariTerkirim ? (
+          ) : tampil.length === 0 && !adaFilter ? (
             <KeadaanKosong
               judul="Belum ada produk"
               keterangan="Tambahkan produk pertama, atau ambil dari transaksi POS yang sudah masuk."
@@ -247,7 +309,11 @@ export function ProductsView() {
           ) : tampil.length === 0 ? (
             <KeadaanKosong
               judul="Tidak ada yang cocok"
-              keterangan="Ubah kata pencarian."
+              keterangan={
+                kodeSama
+                  ? "Tidak ada produk yang Product Code-nya sama dengan ProductID. Ubah pencarian atau matikan filter."
+                  : "Ubah kata pencarian."
+              }
             />
           ) : (
             <div>
@@ -282,8 +348,11 @@ export function ProductsView() {
                           <TableCell className="font-mono font-medium">
                             {p.code}
                           </TableCell>
-                          <TableCell className="font-mono">
+                          <TableCell className="font-mono whitespace-nowrap">
                             {p.product_code ?? <BelumDiisi />}
+                            {p.product_code === p.code ? (
+                              <SamaDenganProductId />
+                            ) : null}
                           </TableCell>
                           <TableCell>{p.name}</TableCell>
                           <TableCell>{p.category ?? "—"}</TableCell>

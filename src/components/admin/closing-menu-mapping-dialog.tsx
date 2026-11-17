@@ -23,6 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { KartuSkeleton } from "@/components/dashboard/states";
 import { useClosingMenu } from "@/hooks/use-closing";
 import { api } from "@/lib/api/browser";
@@ -36,6 +43,8 @@ import type {
 
 const MULTIPLIER_MAKS = 1000;
 const JEDA_CARI_MS = 300;
+/** Nilai Select untuk "belum diisi" — Select tidak menerima string kosong. */
+const TANPA_WARNA = "__tanpa_warna__";
 
 /** `detail.code` 409 backend: tanda "tidak ada di POS" bentrok dengan mapping aktif. */
 const KODE_BENTROK = "not_in_pos_conflict";
@@ -200,6 +209,31 @@ export function ClosingMenuMappingDialog({
     },
   });
 
+  const warnaPiring = useQuery({
+    queryKey: ["product-menu-platecolors"],
+    enabled: menuId !== null,
+    queryFn: ({ signal }) =>
+      api.request<string[]>("/api/product-menus/platecolors", { signal }),
+  });
+
+  const simpanWarna = useMutation({
+    mutationFn: (platecolor: string | null) =>
+      api.request<ClosingMenu>(`/api/closing-menus/${menuId}/platecolor`, {
+        method: "PUT",
+        body: { platecolor },
+      }),
+    onSuccess: (hasil) => {
+      void segarkan();
+      toast.success(
+        hasil.platecolor
+          ? `${hasil.menu_name} memakai harga piring ${hasil.platecolor}.`
+          : `Warna piring ${hasil.menu_name} dikosongkan.`,
+      );
+    },
+    onError: (error) =>
+      toast.error(pesanGagal(error, "Gagal menyimpan warna piring.")),
+  });
+
   const tandai = useMutation({
     mutationFn: (body: {
       not_in_pos: boolean;
@@ -335,6 +369,46 @@ export function ClosingMenuMappingDialog({
               >
                 {tidakAdaDiPos ? "Lepas tanda" : "Tandai tidak ada di POS"}
               </Button>
+            </section>
+
+            <section
+              aria-label="Warna piring"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
+            >
+              <div className="text-sm">
+                <Label htmlFor="warna-piring-menu" className="font-medium">
+                  Warna piring
+                </Label>
+                <div className="text-muted-foreground">
+                  Harga piring warna ini dikirim ke ERP untuk porsi Colorplate
+                  menu ini. Wajib kalau menu terjual.
+                </div>
+              </div>
+              <Select
+                value={menu?.platecolor ?? TANPA_WARNA}
+                disabled={simpanWarna.isPending || warnaPiring.isPending}
+                onValueChange={(v) =>
+                  simpanWarna.mutate(v === TANPA_WARNA ? null : v)
+                }
+              >
+                <SelectTrigger id="warna-piring-menu" className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TANPA_WARNA}>Belum diisi</SelectItem>
+                  {/* Warna tersimpan tetap tampil walau sudah tidak terjual lagi. */}
+                  {[
+                    ...new Set([
+                      ...(menu?.platecolor ? [menu.platecolor] : []),
+                      ...(warnaPiring.data ?? []),
+                    ]),
+                  ].map((w) => (
+                    <SelectItem key={w} value={w}>
+                      {w}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </section>
 
             <section className="space-y-2">

@@ -44,6 +44,7 @@ const PILIHAN_STATUS: { value: StatusMenu; label: string }[] = [
   { value: "unmapped", label: "Belum dipetakan" },
   { value: "mapped", label: "Sudah dipetakan" },
   { value: "not_in_pos", label: "Tidak ada di POS" },
+  { value: "no_platecolor", label: "Belum ada warna piring" },
   { value: "all", label: "Semua" },
 ];
 
@@ -108,6 +109,11 @@ export function ClosingMenusView() {
               dan mapping ProductID tidak bisa aktif bersamaan — admin diminta
               memilih salah satunya.
             </p>
+            <p>
+              <em>Warna piring</em> menentukan harga piring yang dikirim ke ERP
+              untuk porsi Colorplate menu itu. Menu yang terjual tanpa warna
+              piring memblokir kirim rekap closing.
+            </p>
           </>
         }
       />
@@ -161,14 +167,18 @@ export function ClosingMenusView() {
                   ? "Semua menu sudah dipetakan"
                   : status === "not_in_pos"
                     ? "Tidak ada menu yang ditandai"
-                    : "Tidak ada menu"
+                    : status === "no_platecolor"
+                      ? "Semua menu sudah punya warna piring"
+                      : "Tidak ada menu"
               }
               keterangan={
                 status === "unmapped"
                   ? "Menu baru dari closing report berikutnya akan muncul di sini."
                   : status === "not_in_pos"
                     ? "Menu Colorplate yang tidak dijual di POS ditandai dari tombol Atur mapping."
-                    : "Belum ada menu closing yang cocok dengan filter ini."
+                    : status === "no_platecolor"
+                      ? "Warna piring diisi dari tombol Atur mapping."
+                      : "Belum ada menu closing yang cocok dengan filter ini."
               }
             />
           ) : (
@@ -185,6 +195,7 @@ export function ClosingMenusView() {
                     <TableRow>
                       <TableHead>Menu closing</TableHead>
                       <TableHead>ProductID POS</TableHead>
+                      <TableHead>Warna piring</TableHead>
                       <TableHead>Terakhir terlihat</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
@@ -201,6 +212,15 @@ export function ClosingMenusView() {
                         </TableCell>
                         <TableCell>
                           <RingkasanMapping menu={m} />
+                        </TableCell>
+                        <TableCell>
+                          {m.platecolor ? (
+                            <span className="text-sm">{m.platecolor}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              Belum diisi
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {formatTanggalWaktuUtc(m.last_seen_at)}
