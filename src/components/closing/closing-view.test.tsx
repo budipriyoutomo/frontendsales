@@ -568,6 +568,8 @@ describe("ClosingView — kirim ke API", () => {
               colorplate_tanpa_closing: [],
               menu_tanpa_warna: [],
               warna_tidak_lengkap: [],
+              transaksi_tanpa_pembayaran: 0,
+              pembayaran_tidak_sama: [],
               last_attempt: null,
               last_sent: null,
             },

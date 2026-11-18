@@ -800,6 +800,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Products
+         * @description Unduh produk hasil filter sebagai CSV, tanpa pagination.
+         *
+         *     Kolom "ProductID POS" berisi mapping aktif, `OUTLET:ProductID` dipisah `; `.
+         *     Diawali BOM UTF-8 supaya Excel membaca nama non-ASCII dengan benar.
+         */
+        get: operations["export_products_api_products_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products/pos-candidates": {
         parameters: {
             query?: never;
@@ -1580,6 +1603,18 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
         };
         /**
+         * ClosingExportPaymentMismatch
+         * @description Tujuan kunjungan yang Σ pembayarannya tidak sama dengan grandTotal.
+         */
+        ClosingExportPaymentMismatch: {
+            /** Visit Purpose Name */
+            visit_purpose_name: string;
+            /** Grand Total */
+            grand_total: number;
+            /** Payment Total */
+            payment_total: number;
+        };
+        /**
          * ClosingExportPosProduct
          * @description ProductID POS yang memblokir kiriman (belum punya master, atau colorplate tanpa closing).
          */
@@ -1633,6 +1668,10 @@ export interface components {
             menu_tanpa_warna: components["schemas"]["ClosingExportUnmappedMenu"][];
             /** Warna Tidak Lengkap */
             warna_tidak_lengkap: components["schemas"]["ClosingExportColorMismatch"][];
+            /** Transaksi Tanpa Pembayaran */
+            transaksi_tanpa_pembayaran: number;
+            /** Pembayaran Tidak Sama */
+            pembayaran_tidak_sama: components["schemas"]["ClosingExportPaymentMismatch"][];
             last_attempt?: components["schemas"]["ClosingExportSummary"] | null;
             last_sent?: components["schemas"]["ClosingExportSummary"] | null;
         };
@@ -2915,6 +2954,49 @@ export interface components {
             data: components["schemas"]["SaleResponse"][];
             pagination: components["schemas"]["PaginationMeta"];
         };
+        /**
+         * SalesPaymentSchema
+         * @description Satu baris pembayaran dari view `vw_orderpaydetail` POS.
+         *
+         *     Lihat docs/handoff-sync-api-payments.md bagian 2.1. `amount` adalah
+         *     nominal bersih tanpa kembalian dan boleh negatif atau nol.
+         */
+        SalesPaymentSchema: {
+            /** Pay Detail Id */
+            pay_detail_id: number;
+            /** Computer Id */
+            computer_id: number;
+            /** Pay Type Id */
+            pay_type_id: number;
+            /** Pay Type Code */
+            pay_type_code?: string | null;
+            /** Pay Type Name */
+            pay_type_name?: string | null;
+            /** Pay Type Display Name */
+            pay_type_display_name?: string | null;
+            /** Amount */
+            amount: number | string;
+            /**
+             * Cash Change
+             * @default 0
+             */
+            cash_change: number | string;
+            /**
+             * Is From Edc
+             * @default 0
+             */
+            is_from_edc: number;
+            /**
+             * Is Sale
+             * @default 0
+             */
+            is_sale: number;
+            /**
+             * Is Other Receipt
+             * @default 0
+             */
+            is_other_receipt: number;
+        };
         /** SalesSchema */
         SalesSchema: {
             /** Transaction Id */
@@ -3087,6 +3169,8 @@ export interface components {
             is_from_other_transaction: number;
             /** Items */
             items?: components["schemas"]["SalesItemSchema"][];
+            /** Payments */
+            payments?: components["schemas"]["SalesPaymentSchema"][] | null;
         };
         /** SendClosingExportRequest */
         SendClosingExportRequest: {
@@ -4795,6 +4879,8 @@ export interface operations {
             query?: {
                 /** @description Cari ProductID, Product Code, nama, kategori, subkategori, atau brand */
                 q?: string | null;
+                /** @description Hanya produk yang Product Code-nya sama dengan ProductID */
+                same_code?: boolean;
                 limit?: number;
                 offset?: number;
             };
@@ -4844,6 +4930,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_products_api_products_export_get: {
+        parameters: {
+            query?: {
+                /** @description Cari ProductID, Product Code, nama, kategori, subkategori, atau brand */
+                q?: string | null;
+                /** @description Hanya produk yang Product Code-nya sama dengan ProductID */
+                same_code?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

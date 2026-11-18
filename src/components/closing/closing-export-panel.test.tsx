@@ -58,6 +58,8 @@ function pasangan(tanggal: string, lain = {}) {
     colorplate_tanpa_closing: [],
     menu_tanpa_warna: [],
     warna_tidak_lengkap: [],
+    transaksi_tanpa_pembayaran: 0,
+    pembayaran_tidak_sama: [],
     last_attempt: null,
     last_sent: null,
     ...lain,
@@ -329,6 +331,44 @@ describe("ClosingExportPanel", () => {
     expect(
       within(tidakLengkap).getByText(
         /piring GOLD: 2 terjual di POS, tidak ada menu closing/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("menampilkan alasan blokir pembayaran", async () => {
+    server.use(
+      http.get("/api/closing-exports/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            pasangan("2026-10-04", {
+              can_send: false,
+              transaksi_tanpa_pembayaran: 12,
+            }),
+            pasangan("2026-10-03", {
+              can_send: false,
+              pembayaran_tidak_sama: [
+                {
+                  visit_purpose_name: "SALEMODE 2",
+                  grand_total: 33000,
+                  payment_total: 32000,
+                },
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+    await tampil();
+
+    expect(
+      within(barisTanggal(/4 Okt/)).getByText(
+        /12 transaksi belum punya data pembayaran dari POS/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(barisTanggal(/3 Okt/)).getByText(
+        /pembayaran SALEMODE 2 Rp\s?32\.000, tidak sama dengan grand total Rp\s?33\.000/i,
       ),
     ).toBeInTheDocument();
   });

@@ -46,6 +46,7 @@ import { bisaDiulang, ditolakSequenceUsang } from "@/lib/closing";
 import type { Filter } from "@/lib/filter";
 import {
   formatAngka,
+  formatRupiah,
   formatTanggal,
   formatTanggalWaktuUtc,
 } from "@/lib/format";
@@ -309,6 +310,8 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
     colorplate_tanpa_closing: tanpaClosing,
     menu_tanpa_warna: tanpaWarna,
     warna_tidak_lengkap: warnaTidakLengkap,
+    transaksi_tanpa_pembayaran: tanpaPembayaran,
+    pembayaran_tidak_sama: pembayaranTidakSama,
   } = pasangan;
   const soalMenu =
     belum.length + dobel.length + colorplate.length + tanpaWarna.length > 0;
@@ -316,7 +319,9 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
     !soalMenu &&
     tanpaMaster.length === 0 &&
     tanpaClosing.length === 0 &&
-    warnaTidakLengkap.length === 0
+    warnaTidakLengkap.length === 0 &&
+    tanpaPembayaran === 0 &&
+    pembayaranTidakSama.length === 0
   )
     return null;
 
@@ -386,6 +391,19 @@ function AlasanBlokir({ pasangan }: { pasangan: ClosingExportStatus }) {
           — tunggu closing outlet ini masuk
         </p>
       ) : null}
+      {tanpaPembayaran > 0 ? (
+        <p>
+          {formatAngka(tanpaPembayaran)} transaksi belum punya data pembayaran
+          dari POS — pasang view pembayaran di outlet, lalu ulangi closing
+          tanggal ini
+        </p>
+      ) : null}
+      {pembayaranTidakSama.map((x) => (
+        <p key={`bayar-${x.visit_purpose_name}`}>
+          Pembayaran {x.visit_purpose_name} {formatRupiah(x.payment_total)},
+          tidak sama dengan grand total {formatRupiah(x.grand_total)}
+        </p>
+      ))}
     </div>
   );
 }
