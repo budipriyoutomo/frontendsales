@@ -8,6 +8,7 @@ import { DailyChart } from "@/components/dashboard/daily-chart";
 import { OutletComparison } from "@/components/dashboard/outlet-comparison";
 import { TopProducts } from "@/components/dashboard/top-products";
 import { GroupRecap } from "@/components/dashboard/group-recap";
+import { PaymentSummary } from "@/components/dashboard/payment-summary";
 import { bacaFilter } from "@/lib/filter";
 import {
   PARAM_GROUP_REKAP,
@@ -69,6 +70,8 @@ export function DashboardView({ role }: { role: Role }) {
           onGroupChange={(g) => tulis(PARAM_GROUP_TERLARIS, g ? [g] : [])}
         />
       </div>
+
+      <PaymentSummary filter={filter} />
 
       <GroupRecap
         filter={filter}

@@ -264,3 +264,72 @@ describe("TransaksiView — detail (5.3)", () => {
     expect(within(dialog).getByText("Minuman")).toBeInTheDocument();
   });
 });
+
+describe("TransaksiView — pembayaran di detail", () => {
+  function bayar(id: number, nama: string, amount: number, kembalian = 0) {
+    return {
+      computer_id: 1,
+      pay_detail_id: id,
+      pay_type_id: id,
+      pay_type_code: null,
+      pay_type_name: nama,
+      pay_type_display_name: null,
+      amount,
+      cash_change: kembalian,
+    };
+  }
+
+  async function bukaDetail(payments: unknown) {
+    server.use(
+      daftar([sale(1)], { limit: 50, offset: 0, total: 1, has_more: false }),
+      http.get("/api/sales/1", () =>
+        HttpResponse.json({
+          success: true,
+          data: { ...sale(1), items: [], payments },
+        }),
+      ),
+    );
+    renderWithQuery(<TransaksiView role="admin" />);
+    await screen.findByText("REF-1");
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /detail/i }));
+    return screen.findByRole("dialog");
+  }
+
+  it("menampilkan jenis bayar, jumlah, kembalian, dan total", async () => {
+    const dialog = await bukaDetail([
+      bayar(1, "Cash", 100000, 20000),
+      bayar(2, "QRIS", 50000),
+    ]);
+
+    expect(await within(dialog).findByText("Cash")).toBeInTheDocument();
+    expect(within(dialog).getByText("QRIS")).toBeInTheDocument();
+    expect(within(dialog).getByText("Rp 20.000")).toBeInTheDocument();
+    // Total 150.000 = nilai dibayar → muncul di ringkasan dan di footer.
+    expect(within(dialog).getAllByText("Rp 150.000")).toHaveLength(2);
+    expect(within(dialog).queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("memberi tanda bila total pembayaran tidak sama dengan nilai dibayar", async () => {
+    const dialog = await bukaDetail([bayar(1, "Cash", 100000)]);
+
+    expect(await within(dialog).findByRole("note")).toHaveTextContent(
+      /tidak sama/,
+    );
+  });
+
+  it("membedakan pembayaran belum dikirim dan tanpa pembayaran", async () => {
+    const dialog = await bukaDetail(null);
+    expect(
+      await within(dialog).findByText(/belum dikirim POS/),
+    ).toBeInTheDocument();
+  });
+
+  it("menyebut transaksi tanpa pembayaran", async () => {
+    const dialog = await bukaDetail([]);
+    expect(
+      await within(dialog).findByText(/tanpa pembayaran/),
+    ).toBeInTheDocument();
+  });
+});

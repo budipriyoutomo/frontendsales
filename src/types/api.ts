@@ -239,6 +239,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payment Summary
+         * @description Total pembayaran per outlet + jenis bayar. Transaksi terhapus tidak dihitung.
+         *
+         *     Jenis bayar tidak digabung antar outlet: PayTypeID milik POS tiap outlet.
+         */
+        get: operations["get_payment_summary_api_sales_payments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales/by-outlet": {
         parameters: {
             query?: never;
@@ -308,7 +330,7 @@ export interface paths {
         };
         /**
          * Get Sale Detail
-         * @description Detail satu transaksi beserta itemnya.
+         * @description Detail satu transaksi beserta item dan pembayarannya.
          *
          *     Transaksi milik outlet lain menghasilkan 404, bukan 403 — supaya nomor
          *     transaksi outlet lain tidak bisa dipetakan lewat beda status code.
@@ -2457,6 +2479,37 @@ export interface components {
             /** Has More */
             has_more: boolean;
         };
+        /** PaymentSummaryData */
+        PaymentSummaryData: {
+            /** Rows */
+            rows: components["schemas"]["PaymentSummaryRow"][];
+            /** Total Amount */
+            total_amount: number;
+            /** Transactions Without Payments */
+            transactions_without_payments: number;
+        };
+        /** PaymentSummaryResponse */
+        PaymentSummaryResponse: {
+            /**
+             * Success
+             * @default true
+             */
+            success: boolean;
+            data: components["schemas"]["PaymentSummaryData"];
+        };
+        /** PaymentSummaryRow */
+        PaymentSummaryRow: {
+            /** Outlet Code */
+            outlet_code?: string | null;
+            /** Pay Type Id */
+            pay_type_id: number;
+            /** Pay Type Name */
+            pay_type_name?: string | null;
+            /** Total Transactions */
+            total_transactions: number;
+            /** Total Amount */
+            total_amount: number;
+        };
         /** PlatecolorListResponse */
         PlatecolorListResponse: {
             /**
@@ -2804,6 +2857,8 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["SaleItemResponse"][];
+            /** Payments */
+            payments?: components["schemas"]["SalePaymentResponse"][] | null;
         };
         /** SaleDetailResponse */
         SaleDetailResponse: {
@@ -2840,6 +2895,28 @@ export interface components {
             void_staff_id: number;
             /** Comment */
             comment?: string | null;
+        };
+        /** SalePaymentResponse */
+        SalePaymentResponse: {
+            /** Computer Id */
+            computer_id: number;
+            /** Pay Detail Id */
+            pay_detail_id: number;
+            /** Pay Type Id */
+            pay_type_id: number;
+            /** Pay Type Code */
+            pay_type_code?: string | null;
+            /** Pay Type Name */
+            pay_type_name?: string | null;
+            /** Pay Type Display Name */
+            pay_type_display_name?: string | null;
+            /** Amount */
+            amount: number;
+            /**
+             * Cash Change
+             * @default 0
+             */
+            cash_change: number;
         };
         /** SaleResponse */
         SaleResponse: {
@@ -3891,6 +3968,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_payment_summary_api_sales_payments_get: {
+        parameters: {
+            query?: {
+                outlet?: string | null;
+                start_date?: string | null;
+                end_date?: string | null;
+                /** @description Kode brand; hanya outlet yang dipetakan ke brand ini */
+                brand?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSummaryResponse"];
                 };
             };
             /** @description Validation Error */

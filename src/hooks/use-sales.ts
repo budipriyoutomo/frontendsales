@@ -8,6 +8,7 @@ import type {
   DailyRow,
   Outlet,
   OutletSalesRow,
+  PaymentSummary,
   ProductGroupSalesRow,
   Summary,
   SyncStatusRow,
@@ -40,6 +41,18 @@ export function useDailySales(filter: Filter) {
     queryKey: kunci("daily", filter),
     queryFn: ({ signal }) =>
       api.request<DailyRow[]>("/api/sales/daily", {
+        signal,
+        query: filterKeQuery(filter),
+      }),
+  });
+}
+
+/** Total pembayaran per outlet + jenis bayar, dari data `payments` agen POS. */
+export function usePaymentSummary(filter: Filter) {
+  return useQuery({
+    queryKey: kunci("payments", filter),
+    queryFn: ({ signal }) =>
+      api.request<PaymentSummary>("/api/sales/payments", {
         signal,
         query: filterKeQuery(filter),
       }),
