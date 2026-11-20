@@ -23,13 +23,13 @@ describe("SyncStatusView — outlet basi ditandai (7.4)", () => {
           outlet_code: "OUT_AKTIF",
           last_synced_at: jamLalu(1),
           last_sale_date: "2026-09-12",
-          total_transactions: 20,
+          transactions_last_30_days: 20,
         },
         {
           outlet_code: "OUT_MATI",
           last_synced_at: jamLalu(48),
           last_sale_date: "2026-09-10",
-          total_transactions: 5,
+          transactions_last_30_days: 5,
         },
       ]),
     );
@@ -52,13 +52,13 @@ describe("SyncStatusView — outlet basi ditandai (7.4)", () => {
           outlet_code: "OUT_AKTIF",
           last_synced_at: jamLalu(1),
           last_sale_date: "2026-09-12",
-          total_transactions: 20,
+          transactions_last_30_days: 20,
         },
         {
           outlet_code: "OUT_MATI",
           last_synced_at: jamLalu(48),
           last_sale_date: "2026-09-10",
-          total_transactions: 5,
+          transactions_last_30_days: 5,
         },
       ]),
     );
@@ -79,7 +79,7 @@ describe("SyncStatusView — outlet yang belum pernah sync (7.5)", () => {
           outlet_code: "OUT_BARU",
           last_synced_at: null,
           last_sale_date: null,
-          total_transactions: 0,
+          transactions_last_30_days: 0,
         },
       ]),
     );
@@ -100,7 +100,7 @@ describe("SyncStatusView — outlet yang belum pernah sync (7.5)", () => {
           outlet_code: "OUT_BARU",
           last_synced_at: null,
           last_sale_date: null,
-          total_transactions: 0,
+          transactions_last_30_days: 0,
         },
       ]),
     );
@@ -110,6 +110,49 @@ describe("SyncStatusView — outlet yang belum pernah sync (7.5)", () => {
 
     // Outlet baru bukan outlet bermasalah — jangan diberi label alarm.
     expect(screen.queryByText(/tidak mengirim data/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("SyncStatusView — jumlah transaksi 30 hari (sync-api 9.14)", () => {
+  it("menyebut jendelanya di judul kolom dan menampilkan angkanya", async () => {
+    server.use(
+      handler([
+        {
+          outlet_code: "OUT_AKTIF",
+          last_synced_at: jamLalu(1),
+          last_sale_date: "2026-09-12",
+          transactions_last_30_days: 4138,
+        },
+      ]),
+    );
+
+    renderWithQuery(<SyncStatusView />);
+
+    const baris = (await screen.findByText("OUT_AKTIF")).closest("tr")!;
+    // Dulu total sepanjang masa; tanpa keterangan, angka yang mengecil
+    // dikira data hilang.
+    expect(
+      screen.getByRole("columnheader", { name: /transaksi 30 hari/i }),
+    ).toBeInTheDocument();
+    expect(within(baris).getByText("4.138")).toBeInTheDocument();
+  });
+
+  it("menampilkan 0 untuk outlet yang sudah sebulan tidak bertransaksi", async () => {
+    server.use(
+      handler([
+        {
+          outlet_code: "OUT_MATI",
+          last_synced_at: jamLalu(24 * 40),
+          last_sale_date: "2026-08-01",
+          transactions_last_30_days: 0,
+        },
+      ]),
+    );
+
+    renderWithQuery(<SyncStatusView />);
+
+    const baris = (await screen.findByText("OUT_MATI")).closest("tr")!;
+    expect(within(baris).getAllByRole("cell").at(-1)).toHaveTextContent("0");
   });
 });
 

@@ -82,7 +82,11 @@ export function SyncStatusView() {
                       <TableHead>Status</TableHead>
                       <TableHead>Terakhir sync</TableHead>
                       <TableHead>Penjualan terakhir</TableHead>
-                      <TableHead className="text-right">Transaksi</TableHead>
+                      {/* Jendela 30 hari dari backend (sync-api 9.14), bukan
+                        total sepanjang masa — judulnya harus menyebutnya. */}
+                      <TableHead className="text-right">
+                        Transaksi 30 hari
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -114,7 +118,7 @@ export function SyncStatusView() {
                             {formatTanggal(row.last_sale_date)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatAngka(row.total_transactions)}
+                            {formatAngka(row.transactions_last_30_days)}
                           </TableCell>
                         </TableRow>
                       );

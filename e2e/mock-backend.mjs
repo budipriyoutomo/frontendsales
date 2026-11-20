@@ -822,19 +822,19 @@ const server = createServer(async (req, res) => {
           outlet_code: "OUTLET_001",
           last_synced_at: jamLalu(1),
           last_sale_date: "2026-09-12",
-          total_transactions: 60,
+          transactions_last_30_days: 60,
         },
         {
           outlet_code: "OUTLET_002",
           last_synced_at: jamLalu(72),
           last_sale_date: "2026-09-09",
-          total_transactions: 60,
+          transactions_last_30_days: 60,
         },
         {
           outlet_code: "OUTLET_003",
           last_synced_at: null,
           last_sale_date: null,
-          total_transactions: 0,
+          transactions_last_30_days: 0,
         },
       ]),
     );

@@ -13,7 +13,7 @@ function baris(last_synced_at: string | null) {
     outlet_code: "OUT1",
     last_sale_date: "2026-09-12",
     last_synced_at,
-    total_transactions: 10,
+    transactions_last_30_days: 10,
   };
 }
 

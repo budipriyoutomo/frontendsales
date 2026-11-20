@@ -692,6 +692,34 @@ Pasangan backend Fase 9.
 - [x] **13.5** Peringatan di filter kalau rentang > 366 hari (`MAKS_HARI_RENTANG`).
 - [x] **13.6** (2026-11-04, ikut 12.8: tipe digenerate dari OpenAPI backend terbaru) `npm run gen:api` ulang setelah backend jalan (param baru di
       `/api/sales/product-groups`).
+- [x] **13.7** (2026-11-19) Keadaan memuat saat pindah menu. Sebelumnya
+      `(app)/` tidak punya `loading.tsx`, jadi layar diam sampai render server
+      halaman tujuan selesai. Sekarang `app/(app)/loading.tsx` (judul + filter + tabel generik) dan `app/(app)/dashboard/loading.tsx` (ringkasan 4 kartu,
+      grafik h-64, dua kartu, tabel — grid & tinggi disalin dari `SummaryCards`
+      / `DailyChart` supaya tidak ada lompatan). Pembungkus bersama
+      `components/layout/memuat.tsx`: `role="status"`, `aria-busy`, satu
+      "Memuat…" `sr-only`, balok skeleton `aria-hidden`. Keduanya berada di
+      bawah `layout.tsx`, jadi sidebar/header tetap tampil.
+      Test: `app/(app)/loading.test.tsx` (status & teks pembaca layar, shell tidak
+      digambar ulang, axe WCAG A/AA, bentuk kerangka dashboard, letak file).
+
+  Batasnya: `loading.tsx` tidak membungkus `layout.tsx` di segmen yang sama.
+  Pindah menu di dalam shell langsung menampilkan kerangka (layout bersama
+  tidak dirender ulang), tetapi **masuk pertama kali** ke `(app)/` (mis.
+  sesudah login) tetap menunggu `getCurrentUser` di layout. Logika auth tidak
+  diubah di sini.
+
+- [x] **13.8** (2026-11-20) Pasangan backend sync-api 9.14 — **breaking change
+      kontrak**: `/api/outlets/sync-status` mengganti `total_transactions`
+      (total sepanjang masa) dengan `transactions_last_30_days` (hari ini WIB +
+      29 hari sebelumnya). `src/types/api.ts` digenerate ulang dari OpenAPI
+      backend (diff hanya `SyncStatusRow`); kolom di `SyncStatusView` kini
+      berjudul "Transaksi 30 hari"; fixture test, `a11y.test.tsx`, dan
+      `e2e/mock-backend.mjs` ikut diganti. Outlet yang sebulan diam tampil 0.
+      **Deploy bersamaan dengan backend.** Urutan mana pun tidak aman sendirian:
+      frontend lama + backend baru, maupun frontend baru + backend lama, sama-sama
+      membaca field yang tidak ada dan kolom transaksinya rusak selama selisih
+      deploy (badge status & waktu sync tetap benar).
 
 ---
 

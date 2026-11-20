@@ -3340,8 +3340,11 @@ export interface components {
             last_sale_date?: string | null;
             /** Last Synced At */
             last_synced_at?: string | null;
-            /** Total Transactions */
-            total_transactions: number;
+            /**
+             * Transactions Last 30 Days
+             * @description Jumlah transaksi 30 hari terakhir (hari ini WIB + 29 hari sebelumnya), termasuk yang terhapus
+             */
+            transactions_last_30_days: number;
         };
         /** TokenResponse */
         TokenResponse: {
